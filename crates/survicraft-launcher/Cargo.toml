@@ -17,5 +17,9 @@ survicraft-client = { path = "../survicraft-client" }
 workspace = true
 
 [[bin]]
-name = "survicraft-launcher"
-path = "src/main.rs"
+name = "survicraft"
+path = "src/bin/survicraft.rs"
+
+[[bin]]
+name = "survicraftd"
+path = "src/bin/survicraftd.rs"
