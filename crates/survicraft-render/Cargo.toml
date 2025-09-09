@@ -1,9 +1,11 @@
 [package]
-name = "surivcraft-render"
+name = "survicraft-render"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bevy.workspace = true
+survicraft-assets = { path = "../survicraft-assets" }
 
 [lints]
 workspace = true

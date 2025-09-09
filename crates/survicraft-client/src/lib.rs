@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use survicraft_render::RenderPlugin;
 
 mod network;
 
@@ -7,6 +8,7 @@ pub struct ClientPlugin;
 impl Plugin for ClientPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(network::NetworkPlugin);
+        app.add_plugins(RenderPlugin);
         app.add_systems(Startup, setup);
     }
 }

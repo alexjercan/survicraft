@@ -747,6 +747,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_asset_loader"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "653857e8685ba3c6f237a7aa67620ae440c87e975f8a843ef098c90c49b9dde6"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "bevy_asset_loader_derive",
+ "path-slash",
+]
+
+[[package]]
+name = "bevy_asset_loader_derive"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ea90451960d44a9908e95de892511dead119b909da68e56b92527efcfac8691"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bevy_asset_macros"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5131,6 +5154,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35fb2e5f958ec131621fdd531e9fc186ed768cbe395337403ae56c17a74c68ec"
 
 [[package]]
+name = "path-slash"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e91099d4268b0e11973f036e885d652fb0b21fedcf69738c627f94db6a44f42"
+
+[[package]]
 name = "pem"
 version = "3.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6261,14 +6290,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
-name = "surivcraft-render"
-version = "0.1.0"
-
-[[package]]
 name = "survicraft-assets"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_asset_loader",
 ]
 
 [[package]]
@@ -6278,6 +6304,7 @@ dependencies = [
  "bevy",
  "lightyear",
  "survicraft-protocol",
+ "survicraft-render",
 ]
 
 [[package]]
@@ -6312,6 +6339,14 @@ dependencies = [
  "lightyear",
  "rand 0.9.2",
  "serde",
+]
+
+[[package]]
+name = "survicraft-render"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "survicraft-assets",
 ]
 
 [[package]]

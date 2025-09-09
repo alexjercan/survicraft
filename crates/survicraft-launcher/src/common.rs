@@ -35,6 +35,7 @@ pub fn new_gui_app() -> App {
         DefaultPlugins
             .build()
             .set(AssetPlugin {
+                file_path: "../survicraft-assets/assets/".into(),
                 meta_check: bevy::asset::AssetMetaCheck::Never,
                 ..default()
             })
