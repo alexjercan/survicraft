@@ -1,0 +1,21 @@
+[package]
+name = "survicraft-launcher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy.workspace = true
+clap.workspace = true
+lightyear.workspace = true
+bevy-inspector-egui.workspace = true
+survicraft-common = { path = "../survicraft-common" }
+survicraft-protocol = { path = "../survicraft-protocol" }
+survicraft-server = { path = "../survicraft-server" }
+survicraft-client = { path = "../survicraft-client" }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "survicraft-launcher"
+path = "src/main.rs"
