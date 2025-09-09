@@ -28,6 +28,7 @@ bevy = {version = "0.16.1", features = [
   "bevy_winit",
   "webgpu", # TODO: Disable this when not on WASM
   "x11",
+  "bevy_gizmos",
 ], default-features = false}
 
 bevy-inspector-egui = "0.33.1"
@@ -69,6 +70,8 @@ bevy_asset_loader = "0.23.0"
 iyes_perf_ui = "0.5.0"
 
 clap = { version = "4.5.47", features = ["derive"] }
+
+rand = "0.9.2"
 
 [profile.dev]
 opt-level = 1

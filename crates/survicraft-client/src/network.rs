@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use lightyear::netcode::Key;
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
-use survicraft_protocol::SERVER_ADDR;
+use survicraft_protocol::{get_client_id, PROTOCOL_ID, SERVER_ADDR};
 
 pub struct NetworkPlugin;
 
@@ -17,9 +17,9 @@ impl Plugin for NetworkPlugin {
 fn startup(mut commands: Commands) -> Result {
     let auth = Authentication::Manual {
         server_addr: SERVER_ADDR,
-        client_id: 0,
+        client_id: get_client_id(),
         private_key: Key::default(),
-        protocol_id: 0,
+        protocol_id: PROTOCOL_ID,
     };
     let client = commands
         .spawn((
@@ -32,6 +32,7 @@ fn startup(mut commands: Commands) -> Result {
             UdpIo::default(),
         ))
         .id();
+
     commands.trigger_targets(Connect, client);
 
     Ok(())

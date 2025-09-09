@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
     diagnostic::DiagnosticsPlugin,
     log::{Level, LogPlugin},
@@ -6,6 +8,9 @@ use bevy::{
     window::PresentMode,
 };
 use clap::Parser;
+use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
+use survicraft_common::debug::DebugPlugin;
+use survicraft_protocol::FIXED_TIMESTEP_HZ;
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 enum Mode {
@@ -29,16 +34,31 @@ fn main() {
     match cli.mode {
         Mode::Client => {
             let mut app = new_gui_app();
+            app.add_plugins(ClientPlugins {
+                tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
+            });
+            app.add_plugins(survicraft_protocol::ProtocolPlugin);
             app.add_plugins(survicraft_client::ClientPlugin);
             app.run();
         }
         Mode::Server => {
             let mut app = new_headless_app();
+            app.add_plugins(ServerPlugins {
+                tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
+            });
+            app.add_plugins(survicraft_protocol::ProtocolPlugin);
             app.add_plugins(survicraft_server::ServerPlugin);
             app.run();
         }
         Mode::Host => {
             let mut app = new_gui_app();
+            app.add_plugins(ClientPlugins {
+                tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
+            });
+            app.add_plugins(ServerPlugins {
+                tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
+            });
+            app.add_plugins(survicraft_protocol::ProtocolPlugin);
             app.add_plugins(survicraft_server::ServerPlugin);
             app.add_plugins(survicraft_client::ClientPlugin);
             app.run();
@@ -81,9 +101,7 @@ fn new_gui_app() -> App {
             .set(window_plugin()),
     );
 
-    // TODO: Use a debug flag and plugin
-    app.add_plugins(bevy_inspector_egui::bevy_egui::EguiPlugin::default());
-    app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
+    app.add_plugins(DebugPlugin);
 
     app
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use survicraft_protocol::{SERVER_ADDR, SERVER_REPLICATION_INTERVAL};
+use survicraft_protocol::{PROTOCOL_ID, SERVER_ADDR, SERVER_REPLICATION_INTERVAL};
 
 pub struct NetworkPlugin;
 
@@ -15,11 +15,12 @@ impl Plugin for NetworkPlugin {
 fn startup(mut commands: Commands) {
     let server = commands
         .spawn((
-            NetcodeServer::new(NetcodeConfig::default()),
+            NetcodeServer::new(NetcodeConfig::default().with_protocol_id(PROTOCOL_ID)),
             LocalAddr(SERVER_ADDR),
             ServerUdpIo::default(),
         ))
         .id();
+
     commands.trigger_targets(Start, server);
 }
 
