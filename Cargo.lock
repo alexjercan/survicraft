@@ -6312,6 +6312,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "lightyear",
+ "survicraft-common",
  "survicraft-protocol",
 ]
 
@@ -6321,6 +6322,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
+ "bevy_simple_text_input",
  "iyes_perf_ui",
 ]
 

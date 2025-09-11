@@ -88,6 +88,8 @@ fn main() {
         survicraft_client::ClientPluginSet.run_if(in_state(GameStates::Playing)),
     );
 
+    app.add_systems(OnEnter(GameStates::Playing), setup_game);
+
     app.run();
 }
 
@@ -157,4 +159,26 @@ fn handle_multiplayer_pressed(
         next_state.set(GameStates::Playing);
         *mode = Mode::Client;
     }
+}
+
+fn setup_game(mut commands: Commands) {
+    // commands.spawn((
+    //     Name::new("Camera3d"),
+    //     Camera3d::default(),
+    //     StateScoped(GameStates::Playing),
+    // ));
+
+    commands.spawn((
+        Name::new("ChatUI"),
+        survicraft_common::chat::UIRoot,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        StateScoped(GameStates::Playing),
+    ));
 }
