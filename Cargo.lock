@@ -1465,6 +1465,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_simple_text_input"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85acdf186fcf5b5cab71832cfbb09e16f640af373a85340674abca761b720f07"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_sprite"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6304,7 +6313,6 @@ dependencies = [
  "bevy",
  "lightyear",
  "survicraft-protocol",
- "survicraft-render",
 ]
 
 [[package]]
@@ -6322,8 +6330,10 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
+ "bevy_simple_text_input",
  "clap",
  "lightyear",
+ "survicraft-assets",
  "survicraft-client",
  "survicraft-common",
  "survicraft-protocol",
@@ -6339,14 +6349,6 @@ dependencies = [
  "lightyear",
  "rand 0.9.2",
  "serde",
-]
-
-[[package]]
-name = "survicraft-render"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "survicraft-assets",
 ]
 
 [[package]]

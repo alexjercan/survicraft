@@ -1,18 +1,15 @@
 use bevy::prelude::*;
-use survicraft_render::RenderPlugin;
 
 mod network;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ClientPluginSet;
 
 pub struct ClientPlugin;
 
 impl Plugin for ClientPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(network::NetworkPlugin);
-        app.add_plugins(RenderPlugin);
-        app.add_systems(Startup, setup);
+        app.configure_sets(Update, network::NetworkPluginSet.in_set(ClientPluginSet));
     }
-}
-
-fn setup(mut commands: Commands) {
-    commands.spawn(Camera3d::default());
 }

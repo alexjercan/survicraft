@@ -2,8 +2,8 @@ use bevy::{
     diagnostic::DiagnosticsPlugin,
     log::{Level, LogPlugin},
     prelude::*,
-    window::PresentMode,
     state::app::StatesPlugin,
+    window::PresentMode,
 };
 use survicraft_common::debug::DebugPlugin;
 

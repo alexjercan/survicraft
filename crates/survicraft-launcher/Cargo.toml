@@ -8,6 +8,8 @@ bevy.workspace = true
 clap.workspace = true
 lightyear.workspace = true
 bevy-inspector-egui.workspace = true
+bevy_simple_text_input.workspace = true
+survicraft-assets = { path = "../survicraft-assets" }
 survicraft-common = { path = "../survicraft-common" }
 survicraft-protocol = { path = "../survicraft-protocol" }
 survicraft-server = { path = "../survicraft-server" }

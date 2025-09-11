@@ -7,7 +7,6 @@ edition = "2024"
 bevy.workspace = true
 lightyear.workspace = true
 survicraft-protocol = { path = "../survicraft-protocol" }
-survicraft-render = { path = "../survicraft-render" }
 
 [lints]
 workspace = true

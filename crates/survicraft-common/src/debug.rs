@@ -24,7 +24,12 @@ impl Plugin for DebugPlugin {
             // We need to order our system before PerfUiSet::Setup,
             // so that iyes_perf_ui can process any new Perf UI in the same
             // frame as we spawn the entities. Otherwise, Bevy UI will complain.
-            .add_systems(Update, toggle.before(iyes_perf_ui::PerfUiSet::Setup).in_set(DebugPluginSet))
+            .add_systems(
+                Update,
+                toggle
+                    .before(iyes_perf_ui::PerfUiSet::Setup)
+                    .in_set(DebugPluginSet),
+            )
             .add_systems(Update, draw_cursor.in_set(DebugPluginSet))
             .add_systems(Update, setup.in_set(DebugPluginSet).run_if(run_once));
     }
