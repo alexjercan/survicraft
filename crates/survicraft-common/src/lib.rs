@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 pub mod debug;
 pub mod main_menu;
-pub mod chat;
 pub mod setup;
 
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy)]

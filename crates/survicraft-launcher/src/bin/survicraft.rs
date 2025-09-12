@@ -8,7 +8,6 @@ use std::{
 use survicraft_client::{ClientConnection, ClientMetadata};
 use survicraft_common::{
     PlayerName,
-    chat::ChatMenuRoot,
     debug::{DebugPlugin, DebugPluginSet},
     main_menu::{
         ClientMultiplayerClickEvent, ClientPlayClickEvent, MainMenuAssets, MainMenuPlugin,
@@ -102,8 +101,6 @@ fn main() {
         survicraft_client::ClientPluginSet.run_if(in_state(GameStates::Playing)),
     );
 
-    app.add_systems(OnEnter(GameStates::Playing), setup_game);
-
     app.run();
 }
 
@@ -131,7 +128,7 @@ fn setup_menu(mut commands: Commands) {
     commands.spawn((
         Name::new("CameraMainMenuUI"),
         Camera2d,
-        StateScoped(GameStates::MainMenu),
+        // StateScoped(GameStates::MainMenu),
     ));
 
     commands.spawn((
@@ -201,26 +198,4 @@ fn handle_multiplayer_pressed(
             StateScoped(GameStates::Playing),
         ));
     }
-}
-
-fn setup_game(mut commands: Commands) {
-    commands.spawn((
-        Name::new("Camera3d"),
-        Camera3d::default(),
-        StateScoped(GameStates::Playing),
-    ));
-
-    commands.spawn((
-        Name::new("ChatUI"),
-        ChatMenuRoot,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-        StateScoped(GameStates::Playing),
-    ));
 }

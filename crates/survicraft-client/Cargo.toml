@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 bevy.workspace = true
 lightyear.workspace = true
+bevy_simple_text_input.workspace = true
 survicraft-protocol = { path = "../survicraft-protocol" }
 survicraft-common = { path = "../survicraft-common" }
 

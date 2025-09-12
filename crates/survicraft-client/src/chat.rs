@@ -1,24 +1,22 @@
+//! The Chat plugin provides a simple chat UI and handles sending and receiving chat messages.
+
 use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
+use lightyear::prelude::{MessageReceiver, MessageSender, Replicated};
+use survicraft_protocol::{component::{PlayerId, PlayerName}, message::{ClientChatMessage, MessageChannel, ServerChatMessage}};
 
 const BORDER_COLOR: Color = Color::srgba(0.25, 0.25, 0.25, 0.25);
 const BACKGROUND_COLOR: Color = Color::srgba(0.15, 0.15, 0.15, 0.75);
 const TEXT_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
 
-/// Marker component for the UI root node.
-/// Add this component to an entity to make it the root of the UI and spawn the chat UI as a child.
 #[derive(Component)]
-pub struct ChatMenuRoot;
-
-/// Event get's triggered when a chat message is submitted.
-#[derive(Debug, Clone, Event, Deref, DerefMut)]
-pub struct ChatMessageEvent(pub String);
+pub(crate) struct ChatMenuRoot;
 
 #[derive(Resource, Clone, Debug, Default, PartialEq, Eq, Deref, DerefMut)]
-pub struct ChatEnabled(pub bool);
+pub(crate) struct ChatEnabled(pub bool);
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ChatPluginSet;
+pub(crate) struct ChatPluginSet;
 
 #[derive(Component, Clone, Copy, Debug)]
 struct ChatUI;
@@ -26,18 +24,21 @@ struct ChatUI;
 #[derive(Component, Clone, Copy, Debug)]
 struct ChatMessageInput;
 
-pub struct ChatPlugin;
+pub(crate) struct ChatPlugin;
 
 impl Plugin for ChatPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChatEnabled>();
-        app.add_event::<ChatMessageEvent>();
 
         app.add_systems(
             Update,
-            (chat_ui_setup, on_chat_message)
+            (chat_ui_setup, on_chat_submit)
                 .in_set(ChatPluginSet)
                 .run_if(resource_equals(ChatEnabled(false))),
+        );
+        app.add_systems(
+            Update,
+            on_chat_message.in_set(ChatPluginSet),
         );
     }
 }
@@ -88,10 +89,10 @@ fn chat_ui_setup(mut commands: Commands, root: Single<Entity, (With<ChatMenuRoot
     });
 }
 
-fn on_chat_message(
-    mut ev_chat: EventWriter<ChatMessageEvent>,
+fn on_chat_submit(
     mut ev_input: EventReader<TextInputSubmitEvent>,
     message_input: Single<Entity, With<ChatMessageInput>>,
+    mut sender: Single<&mut MessageSender<ClientChatMessage>>,
 ) {
     for ev in ev_input.read() {
         if ev.entity != message_input.entity() {
@@ -100,7 +101,22 @@ fn on_chat_message(
 
         let msg = ev.value.trim();
         if !msg.is_empty() {
-            ev_chat.write(ChatMessageEvent(msg.to_string()));
+            sender.send::<MessageChannel>(ClientChatMessage {
+                message: msg.to_string(),
+            });
+        }
+    }
+}
+
+fn on_chat_message(
+    mut receiver: Single<&mut MessageReceiver<ServerChatMessage>>,
+    q_players: Query<(&PlayerName, &PlayerId), With<Replicated>>,
+) {
+    for message in receiver.receive() {
+        if let Some((name, _)) = q_players.iter().find(|(_, id)| id.0 == message.sender) {
+            info!("{}: {}", name.0, message.message);
+        } else {
+            info!("Unknown({}): {}", message.sender, message.message);
         }
     }
 }

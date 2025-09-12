@@ -19,6 +19,7 @@ pub struct ClientChatMessage {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ServerChatMessage {
     // NOTE: we probably want to add some metadata like sender id, timestamp, etc.
+    pub sender: PeerId,
     pub message: String,
 }
 

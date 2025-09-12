@@ -1,31 +1,15 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+mod chat;
+mod network;
 
 use bevy::prelude::*;
-use lightyear::{
-    netcode::{Key, NetcodeClient},
-    prelude::{client::NetcodeConfig, *},
-};
-use survicraft_common::chat::{ChatMessageEvent, ChatPlugin, ChatPluginSet};
-use survicraft_protocol::{
-    PROTOCOL_ID, get_client_id,
-    message::{
-        ClientChatMessage, ClientMetaMessage, MessageChannel, ServerChatMessage,
-        ServerWelcomeMessage,
-    },
-};
+use lightyear::connection::identity::is_client;
+pub use network::{ClientConnection, ClientMetadata};
 
-/// Structure representing a request to connect to a server.
-/// To connect to the server, add this component to an entity.
-#[derive(Debug, Clone, Component)]
-pub struct ClientConnection {
-    pub address: SocketAddr,
-}
-
-/// Component to store client metadata such as username.
-/// This is used to add metadata to the client upon connection.
-#[derive(Debug, Clone, Component)]
-pub struct ClientMetadata {
-    pub username: String,
+#[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
+enum ClientStates {
+    #[default]
+    Connecting,
+    Playing,
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -35,85 +19,42 @@ pub struct ClientPlugin;
 
 impl Plugin for ClientPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(ChatPlugin);
-        app.configure_sets(Update, ChatPluginSet.in_set(ClientPluginSet));
+        app.init_state::<ClientStates>();
+        app.enable_state_scoped_entities::<ClientStates>();
+
+        app.add_plugins(network::NetworkPlugin);
+        app.configure_sets(Update, network::NetworkPluginSet.in_set(ClientPluginSet));
+
+        app.add_plugins(chat::ChatPlugin);
+        app.configure_sets(Update, chat::ChatPluginSet.in_set(ClientPluginSet));
 
         app.add_systems(
             Update,
-            (
-                client_connect,
-                handle_welcome_message,
-                on_chat_message,
-                handle_chat_message,
-            )
-                .in_set(ClientPluginSet),
+            (|mut state: ResMut<NextState<ClientStates>>| {
+                state.set(ClientStates::Playing);
+            })
+            .in_set(ClientPluginSet)
+            .run_if(in_state(ClientStates::Connecting).and(is_client)),
+        );
+        app.add_systems(
+            OnEnter(ClientStates::Playing),
+            setup_chat.in_set(ClientPluginSet),
         );
     }
 }
 
-fn client_connect(
-    mut commands: Commands,
-    connection: Single<(Entity, &ClientConnection), Added<ClientConnection>>,
-) -> Result {
-    let (entity, connection) = connection.into_inner();
-    info!(
-        "Starting client, connecting to server at {}",
-        connection.address
-    );
-
-    let auth = Authentication::Manual {
-        server_addr: connection.address,
-        client_id: get_client_id(),
-        private_key: Key::default(),
-        protocol_id: PROTOCOL_ID,
-    };
-
-    let client = commands
-        .entity(entity)
-        .insert((
-            Name::new("Client"),
-            Client::default(),
-            LocalAddr(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)),
-            PeerAddr(connection.address),
-            Link::new(None),
-            ReplicationReceiver::default(),
-            NetcodeClient::new(auth, NetcodeConfig::default())?,
-            UdpIo::default(),
-        ))
-        .id();
-
-    commands.trigger_targets(Connect, client);
-
-    Ok(())
-}
-
-fn handle_welcome_message(
-    mut receiver: Single<&mut MessageReceiver<ServerWelcomeMessage>>,
-    mut sender: Single<&mut MessageSender<ClientMetaMessage>>,
-    metadata: Single<&ClientMetadata>,
-) {
-    for message in receiver.receive() {
-        info!("Received welcome message from server: {:?}", message);
-
-        sender.send::<MessageChannel>(ClientMetaMessage {
-            username: metadata.username.clone(),
-        });
-    }
-}
-
-fn on_chat_message(
-    mut ev_chat: EventReader<ChatMessageEvent>,
-    mut sender: Single<&mut MessageSender<ClientChatMessage>>,
-) {
-    for ChatMessageEvent(message) in ev_chat.read() {
-        sender.send::<MessageChannel>(ClientChatMessage {
-            message: message.clone(),
-        });
-    }
-}
-
-fn handle_chat_message(mut receiver: Single<&mut MessageReceiver<ServerChatMessage>>) {
-    for message in receiver.receive() {
-        info!("Received chat message from server: {:?}", message.message);
-    }
+fn setup_chat(mut commands: Commands) {
+    commands.spawn((
+        Name::new("ChatUI"),
+        chat::ChatMenuRoot,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        StateScoped(ClientStates::Playing),
+    ));
 }
