@@ -5,8 +5,9 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use survicraft_client::ClientConnection;
+use survicraft_client::{ClientConnection, ClientMetadata};
 use survicraft_common::{
+    PlayerName,
     chat::ChatMenuRoot,
     debug::{DebugPlugin, DebugPluginSet},
     main_menu::{
@@ -20,7 +21,7 @@ use clap::Parser;
 use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
 use survicraft_protocol::{FIXED_TIMESTEP_HZ, SERVER_ADDR, SERVER_PORT};
 
-use survicraft_launcher::common::new_gui_app;
+use survicraft_common::setup::new_gui_app;
 
 #[derive(Resource, Clone, Debug, PartialEq, Eq)]
 enum Mode {
@@ -130,7 +131,7 @@ fn setup_menu(mut commands: Commands) {
     commands.spawn((
         Name::new("CameraMainMenuUI"),
         Camera2d,
-        // StateScoped(GameStates::MainMenu),
+        StateScoped(GameStates::MainMenu),
     ));
 
     commands.spawn((
@@ -153,6 +154,7 @@ fn handle_play_button_pressed(
     mut ev_play: EventReader<ClientPlayClickEvent>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut mode: ResMut<Mode>,
+    player_name: Res<PlayerName>,
 ) {
     for _ in ev_play.read() {
         next_state.set(GameStates::Playing);
@@ -169,6 +171,9 @@ fn handle_play_button_pressed(
             ClientConnection {
                 address: SERVER_ADDR,
             },
+            ClientMetadata {
+                username: (**player_name).clone(),
+            },
             StateScoped(GameStates::Playing),
         ));
     }
@@ -179,6 +184,7 @@ fn handle_multiplayer_pressed(
     mut ev_multiplayer: EventReader<ClientMultiplayerClickEvent>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut mode: ResMut<Mode>,
+    player_name: Res<PlayerName>,
 ) {
     for event in ev_multiplayer.read() {
         next_state.set(GameStates::Playing);
@@ -189,17 +195,20 @@ fn handle_multiplayer_pressed(
             ClientConnection {
                 address: SocketAddr::new(addr, SERVER_PORT),
             },
+            ClientMetadata {
+                username: (**player_name).clone(),
+            },
             StateScoped(GameStates::Playing),
         ));
     }
 }
 
 fn setup_game(mut commands: Commands) {
-    // commands.spawn((
-    //     Name::new("Camera3d"),
-    //     Camera3d::default(),
-    //     StateScoped(GameStates::Playing),
-    // ));
+    commands.spawn((
+        Name::new("Camera3d"),
+        Camera3d::default(),
+        StateScoped(GameStates::Playing),
+    ));
 
     commands.spawn((
         Name::new("ChatUI"),

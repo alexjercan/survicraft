@@ -2,6 +2,8 @@ use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
 use std::fmt::Debug;
 
+use crate::{DisplayQuality, PlayerName, Volume};
+
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
 const HOVERED_PRESSED_BUTTON: Color = Color::srgb(0.25, 0.65, 0.25);
@@ -46,19 +48,6 @@ enum MenuState {
     SettingsSound,
     SettingsName,
 }
-
-#[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy)]
-enum DisplayQuality {
-    Low,
-    Medium,
-    High,
-}
-
-#[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy)]
-struct Volume(u32);
-
-#[derive(Resource, Debug, Component, PartialEq, Eq, Clone)]
-struct PlayerName(String);
 
 #[derive(Component, Clone, Copy, Debug)]
 struct MenuItem(MenuState);

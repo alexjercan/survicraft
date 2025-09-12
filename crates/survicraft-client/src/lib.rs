@@ -21,6 +21,13 @@ pub struct ClientConnection {
     pub address: SocketAddr,
 }
 
+/// Component to store client metadata such as username.
+/// This is used to add metadata to the client upon connection.
+#[derive(Debug, Clone, Component)]
+pub struct ClientMetadata {
+    pub username: String,
+}
+
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ClientPluginSet;
 
@@ -83,12 +90,13 @@ fn client_connect(
 fn handle_welcome_message(
     mut receiver: Single<&mut MessageReceiver<ServerWelcomeMessage>>,
     mut sender: Single<&mut MessageSender<ClientMetaMessage>>,
+    metadata: Single<&ClientMetadata>,
 ) {
     for message in receiver.receive() {
         info!("Received welcome message from server: {:?}", message);
 
         sender.send::<MessageChannel>(ClientMetaMessage {
-            username: "Player TODO".to_string(),
+            username: metadata.username.clone(),
         });
     }
 }
