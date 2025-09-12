@@ -4,8 +4,14 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use bevy::prelude::*;
-use lightyear::{netcode::{Key, NetcodeClient}, prelude::{client::NetcodeConfig, *}};
-use survicraft_protocol::{get_client_id, message::{ClientMetaMessage, MessageChannel, ServerWelcomeMessage}, PROTOCOL_ID};
+use lightyear::{
+    netcode::{Key, NetcodeClient},
+    prelude::{client::NetcodeConfig, *},
+};
+use survicraft_protocol::{
+    PROTOCOL_ID, get_client_id,
+    message::{ClientMetaMessage, MessageChannel, ServerWelcomeMessage},
+};
 
 /// Structure representing a request to connect to a server.
 /// To connect to the server, add this component to an entity.

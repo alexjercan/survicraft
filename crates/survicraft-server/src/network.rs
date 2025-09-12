@@ -1,8 +1,17 @@
 //! The network plugin handles the server listener
 
 use bevy::prelude::*;
-use lightyear::{netcode::NetcodeServer, prelude::{server::{NetcodeConfig, ServerUdpIo, Start}, *}};
-use survicraft_protocol::{message::{MessageChannel, ServerWelcomeMessage}, PROTOCOL_ID, SERVER_ADDR, SERVER_REPLICATION_INTERVAL};
+use lightyear::{
+    netcode::NetcodeServer,
+    prelude::{
+        server::{NetcodeConfig, ServerUdpIo, Start},
+        *,
+    },
+};
+use survicraft_protocol::{
+    PROTOCOL_ID, SERVER_ADDR, SERVER_REPLICATION_INTERVAL,
+    message::{MessageChannel, ServerWelcomeMessage},
+};
 
 /// Server component to mark the server entity.
 /// Add this component to an entity to make it a server.

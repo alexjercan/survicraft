@@ -6312,6 +6312,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_simple_text_input",
+ "leafwing-input-manager",
  "lightyear",
  "survicraft-common",
  "survicraft-protocol",
