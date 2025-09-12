@@ -5,7 +5,6 @@ use bevy::{
     state::app::StatesPlugin,
     window::PresentMode,
 };
-use survicraft_common::debug::DebugPlugin;
 
 pub fn window_plugin() -> WindowPlugin {
     WindowPlugin {
@@ -42,8 +41,6 @@ pub fn new_gui_app() -> App {
             .set(log_plugin())
             .set(window_plugin()),
     );
-
-    app.add_plugins(DebugPlugin);
 
     app
 }

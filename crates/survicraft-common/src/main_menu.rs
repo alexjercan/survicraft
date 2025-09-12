@@ -14,8 +14,10 @@ const BACKGROUND_COLOR: Color = Color::srgb(0.15, 0.15, 0.15);
 
 const TEXT_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
 
-#[derive(Component)]
-pub struct UIRoot;
+/// Marker component for the root UI node
+/// Add this component to an entity to make it the root of the UI and spawn the main menu
+#[derive(Debug, Clone, Component)]
+pub struct MainMenuRoot;
 
 #[derive(Resource, Default)]
 pub struct MainMenuAssets {
@@ -24,11 +26,13 @@ pub struct MainMenuAssets {
     pub wrench_icon: Handle<Image>,
 }
 
+/// Event that is triggered when the "Play" button is clicked in the main menu
 #[derive(Debug, Clone, Event)]
-pub struct ClientHostEvent;
+pub struct ClientPlayClickEvent;
 
+/// Event that is triggered when the "Connect" button is clicked in the multiplayer menu
 #[derive(Debug, Clone, Event)]
-pub struct ClientConnectEvent {
+pub struct ClientMultiplayerClickEvent {
     pub address: String,
 }
 
@@ -89,10 +93,8 @@ pub struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(TextInputPlugin); // NOTE: Maybe I want to add this in the top level app
-
-        app.add_event::<ClientHostEvent>();
-        app.add_event::<ClientConnectEvent>();
+        app.add_event::<ClientPlayClickEvent>();
+        app.add_event::<ClientMultiplayerClickEvent>();
 
         app.init_state::<MenuState>();
 
@@ -201,7 +203,7 @@ fn name_settings_menu_update(
 fn main_menu_setup(
     mut commands: Commands,
     assets: Res<MainMenuAssets>,
-    root: Single<Entity, (With<UIRoot>, Added<UIRoot>)>,
+    root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     // Common style for all buttons on the screen
     let button_node = Node {
@@ -344,7 +346,7 @@ fn main_menu_setup(
 
 fn multiplayer_menu_setup(
     mut commands: Commands,
-    root: Single<Entity, (With<UIRoot>, Added<UIRoot>)>,
+    root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
         width: Val::Px(200.0),
@@ -442,7 +444,7 @@ fn multiplayer_menu_setup(
 
 fn settings_menu_setup(
     mut commands: Commands,
-    root: Single<Entity, (With<UIRoot>, Added<UIRoot>)>,
+    root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
         width: Val::Px(200.0),
@@ -509,7 +511,7 @@ fn settings_menu_setup(
 fn display_settings_menu_setup(
     mut commands: Commands,
     display_quality: Res<DisplayQuality>,
-    root: Single<Entity, (With<UIRoot>, Added<UIRoot>)>,
+    root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
         width: Val::Px(200.0),
@@ -609,7 +611,7 @@ fn display_settings_menu_setup(
 fn sound_settings_menu_setup(
     mut commands: Commands,
     volume: Res<Volume>,
-    root: Single<Entity, (With<UIRoot>, Added<UIRoot>)>,
+    root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
         width: Val::Px(200.0),
@@ -689,7 +691,7 @@ fn sound_settings_menu_setup(
 fn name_settings_menu_setup(
     mut commands: Commands,
     player_name: Res<PlayerName>,
-    root: Single<Entity, (With<UIRoot>, Added<UIRoot>)>,
+    root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
         width: Val::Px(200.0),
@@ -789,8 +791,8 @@ fn menu_action(
     mut app_exit_events: EventWriter<AppExit>,
     mut menu_state: ResMut<NextState<MenuState>>,
     q_address: Query<&TextInputValue, With<AddressInput>>,
-    mut play_ev: EventWriter<ClientHostEvent>,
-    mut connect_ev: EventWriter<ClientConnectEvent>,
+    mut play_ev: EventWriter<ClientPlayClickEvent>,
+    mut connect_ev: EventWriter<ClientMultiplayerClickEvent>,
 ) {
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
@@ -800,7 +802,7 @@ fn menu_action(
                 }
                 MenuButtonAction::Play => {
                     info!("Starting a new game from main menu");
-                    play_ev.write(ClientHostEvent);
+                    play_ev.write(ClientPlayClickEvent);
                     menu_state.set(MenuState::Main);
                 }
                 MenuButtonAction::Settings => menu_state.set(MenuState::Settings),
@@ -818,7 +820,7 @@ fn menu_action(
                 MenuButtonAction::MultiplayerConnect => {
                     let address = q_address.single().expect("No address input found");
                     info!("Connecting to multiplayer server at address {}", address.0);
-                    connect_ev.write(ClientConnectEvent {
+                    connect_ev.write(ClientMultiplayerClickEvent {
                         address: address.0.clone(),
                     });
                     menu_state.set(MenuState::Main);

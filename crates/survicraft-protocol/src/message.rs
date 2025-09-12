@@ -6,6 +6,11 @@ use serde::{Deserialize, Serialize};
 pub struct ServerWelcomeMessage;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ClientMetaMessage {
+    pub username: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientChatMessage {
     // NOTE: we probably need to also add the peer id or something to identify the sender
     pub message: String,
@@ -23,6 +28,8 @@ pub fn register_messages(app: &mut App) {
     // Messages for Chat
     app.add_message::<ServerWelcomeMessage>()
         .add_direction(NetworkDirection::ServerToClient);
+    app.add_message::<ClientMetaMessage>()
+        .add_direction(NetworkDirection::ClientToServer);
     app.add_message::<ClientChatMessage>()
         .add_direction(NetworkDirection::ClientToServer);
     app.add_message::<ServerChatMessage>()

@@ -1,19 +1,28 @@
 use bevy::prelude::*;
-use std::time::Duration;
+use bevy_simple_text_input::TextInputPlugin;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    str::FromStr,
+    time::Duration,
+};
+use survicraft_client::ClientConnection;
+use survicraft_common::{
+    chat::ChatMenuRoot,
+    debug::{DebugPlugin, DebugPluginSet},
+    main_menu::{
+        ClientMultiplayerClickEvent, ClientPlayClickEvent, MainMenuAssets, MainMenuPlugin,
+        MainMenuPluginSet, MainMenuRoot,
+    },
+};
+use survicraft_server::ServerListener;
 
 use clap::Parser;
 use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
-use survicraft_protocol::FIXED_TIMESTEP_HZ;
+use survicraft_protocol::{FIXED_TIMESTEP_HZ, SERVER_ADDR, SERVER_PORT};
 
-use survicraft_launcher::{
-    common::new_gui_app,
-    main_menu::{
-        ClientConnectEvent, ClientHostEvent, MainMenuAssets, MainMenuPlugin, MainMenuPluginSet,
-        UIRoot,
-    },
-};
+use survicraft_launcher::common::new_gui_app;
 
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, PartialEq, Eq)]
 enum Mode {
     Client,
     Host,
@@ -49,6 +58,9 @@ fn main() {
         tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
     });
 
+    app.add_plugins(DebugPlugin);
+    app.configure_sets(Update, DebugPluginSet);
+
     app.add_plugins(survicraft_protocol::ProtocolPlugin);
 
     app.add_plugins(survicraft_assets::AssetsPlugin);
@@ -61,13 +73,14 @@ fn main() {
         handle_assets_loaded.run_if(in_state(GameStates::Loading)),
     );
 
+    app.add_plugins(TextInputPlugin);
+
     app.add_plugins(MainMenuPlugin);
     app.configure_sets(
         Update,
         MainMenuPluginSet.run_if(in_state(GameStates::MainMenu)),
     );
     app.add_systems(OnEnter(GameStates::MainMenu), setup_menu);
-
     app.add_systems(
         Update,
         (handle_play_button_pressed, handle_multiplayer_pressed)
@@ -78,7 +91,7 @@ fn main() {
     app.configure_sets(
         Update,
         survicraft_server::ServerPluginSet
-            .run_if(is_hosting.and(in_state(GameStates::Playing)))
+            .run_if(resource_equals(Mode::Host).and(in_state(GameStates::Playing)))
             .before(survicraft_client::ClientPluginSet),
     );
 
@@ -91,10 +104,6 @@ fn main() {
     app.add_systems(OnEnter(GameStates::Playing), setup_game);
 
     app.run();
-}
-
-fn is_hosting(query: Option<Res<Mode>>) -> bool {
-    matches!(query.map(|m| m.clone()), Some(Mode::Host))
 }
 
 fn handle_assets_loaded(
@@ -125,8 +134,8 @@ fn setup_menu(mut commands: Commands) {
     ));
 
     commands.spawn((
-        Name::new("UIRoot"),
-        UIRoot,
+        Name::new("MainMenuUI"),
+        MainMenuRoot,
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -140,24 +149,48 @@ fn setup_menu(mut commands: Commands) {
 }
 
 fn handle_play_button_pressed(
-    mut ev_play: EventReader<ClientHostEvent>,
+    mut commands: Commands,
+    mut ev_play: EventReader<ClientPlayClickEvent>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut mode: ResMut<Mode>,
 ) {
     for _ in ev_play.read() {
         next_state.set(GameStates::Playing);
         *mode = Mode::Host;
+
+        commands.spawn((
+            Name::new("ServerListener"),
+            ServerListener,
+            StateScoped(GameStates::Playing),
+        ));
+
+        commands.spawn((
+            Name::new("ClientConnection"),
+            ClientConnection {
+                address: SERVER_ADDR,
+            },
+            StateScoped(GameStates::Playing),
+        ));
     }
 }
 
 fn handle_multiplayer_pressed(
-    mut ev_connect: EventReader<ClientConnectEvent>,
+    mut commands: Commands,
+    mut ev_multiplayer: EventReader<ClientMultiplayerClickEvent>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut mode: ResMut<Mode>,
 ) {
-    for _ in ev_connect.read() {
+    for event in ev_multiplayer.read() {
         next_state.set(GameStates::Playing);
         *mode = Mode::Client;
+        let addr = IpAddr::from_str(&event.address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
+        commands.spawn((
+            Name::new("ClientConnection"),
+            ClientConnection {
+                address: SocketAddr::new(addr, SERVER_PORT),
+            },
+            StateScoped(GameStates::Playing),
+        ));
     }
 }
 
@@ -170,7 +203,7 @@ fn setup_game(mut commands: Commands) {
 
     commands.spawn((
         Name::new("ChatUI"),
-        survicraft_common::chat::UIRoot,
+        ChatMenuRoot,
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),

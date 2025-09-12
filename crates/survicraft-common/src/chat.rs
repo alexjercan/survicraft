@@ -5,9 +5,12 @@ const BORDER_COLOR: Color = Color::srgba(0.25, 0.25, 0.25, 0.25);
 const BACKGROUND_COLOR: Color = Color::srgba(0.15, 0.15, 0.15, 0.75);
 const TEXT_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
 
+/// Marker component for the UI root node.
+/// Add this component to an entity to make it the root of the UI and spawn the chat UI as a child.
 #[derive(Component)]
-pub struct UIRoot;
+pub struct ChatMenuRoot;
 
+/// Event get's triggered when a chat message is submitted.
 #[derive(Debug, Clone, Event, Deref, DerefMut)]
 pub struct ChatMessageEvent(pub String);
 
@@ -39,7 +42,7 @@ impl Plugin for ChatPlugin {
     }
 }
 
-fn chat_ui_setup(mut commands: Commands, root: Single<Entity, (With<UIRoot>, Added<UIRoot>)>) {
+fn chat_ui_setup(mut commands: Commands, root: Single<Entity, (With<ChatMenuRoot>, Added<ChatMenuRoot>)>) {
     commands.entity(root.entity()).with_children(|parent| {
         parent
             .spawn((
