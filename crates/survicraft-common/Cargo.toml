@@ -5,9 +5,16 @@ edition = "2024"
 
 [dependencies]
 bevy.workspace = true
+itertools.workspace = true
 bevy-inspector-egui.workspace = true
 iyes_perf_ui.workspace = true
 bevy_simple_text_input.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+debug = []
+dev = [
+    "bevy/dynamic_linking", "debug"
+]
