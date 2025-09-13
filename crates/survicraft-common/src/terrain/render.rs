@@ -75,7 +75,6 @@ impl HeightMapLayout {
 
     pub fn mesh(&self, chunk: HashMap<IVec2, f64>) -> Mesh {
         let mut positions = Vec::new();
-        let mut normals = Vec::new();
         let mut uvs = Vec::new();
         let mut indices = Vec::new();
 
@@ -176,12 +175,6 @@ impl HeightMapLayout {
             positions.push(v2);
             positions.push(v3);
 
-            // Normals (pointing up)
-            normals.push(Vec3::Y);
-            normals.push(Vec3::Y);
-            normals.push(Vec3::Y);
-            normals.push(Vec3::Y);
-
             // UVs
             uvs.push([0.0, 0.0]);
             uvs.push([1.0, 0.0]);
@@ -196,6 +189,31 @@ impl HeightMapLayout {
             indices.push(start_index + 1);
             indices.push(start_index + 2);
             indices.push(start_index + 3);
+        }
+
+        let mut normals = vec![Vec3::ZERO; positions.len()];
+
+        for tri in indices.chunks(3) {
+            let i0 = tri[0] as usize;
+            let i1 = tri[1] as usize;
+            let i2 = tri[2] as usize;
+
+            let v0 = positions[i0];
+            let v1 = positions[i1];
+            let v2 = positions[i2];
+
+            let edge1 = v1 - v0;
+            let edge2 = v2 - v0;
+            let n = edge1.cross(edge2).normalize();
+
+            normals[i0] += n;
+            normals[i1] += n;
+            normals[i2] += n;
+        }
+
+        // normalize all
+        for n in &mut normals {
+            *n = n.normalize();
         }
 
         // Create mesh
