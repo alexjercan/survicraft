@@ -2,7 +2,7 @@ use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
 use std::fmt::Debug;
 
-use crate::{DisplayQuality, PlayerName, Volume};
+use crate::{DisplayQualitySetting, PlayerNameSetting, VolumeSetting};
 
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
@@ -87,9 +87,9 @@ impl Plugin for MainMenuPlugin {
 
         app.init_state::<MenuState>();
 
-        app.insert_resource(DisplayQuality::Medium);
-        app.insert_resource(Volume(7));
-        app.insert_resource(PlayerName("Player".to_string()));
+        app.insert_resource(DisplayQualitySetting::Medium);
+        app.insert_resource(VolumeSetting(7));
+        app.insert_resource(PlayerNameSetting("Player".to_string()));
 
         app.add_systems(
             Update,
@@ -110,10 +110,10 @@ impl Plugin for MainMenuPlugin {
         app.add_systems(
             Update,
             (
-                setting_button::<DisplayQuality>
+                setting_button::<DisplayQualitySetting>
                     .run_if(in_state(MenuState::SettingsDisplay))
                     .in_set(MainMenuPluginSet),
-                setting_button::<Volume>
+                setting_button::<VolumeSetting>
                     .run_if(in_state(MenuState::SettingsSound))
                     .in_set(MainMenuPluginSet),
                 name_settings_menu_update
@@ -181,7 +181,7 @@ fn setting_button<T: Resource + Component + PartialEq + Clone + Debug>(
 
 fn name_settings_menu_update(
     query: Query<&TextInputValue, (Changed<TextInputValue>, With<NameInput>)>,
-    mut player_name: ResMut<PlayerName>,
+    mut player_name: ResMut<PlayerNameSetting>,
 ) {
     for text_input_value in query {
         player_name.0 = text_input_value.0.clone();
@@ -499,7 +499,7 @@ fn settings_menu_setup(
 
 fn display_settings_menu_setup(
     mut commands: Commands,
-    display_quality: Res<DisplayQuality>,
+    display_quality: Res<DisplayQualitySetting>,
     root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
@@ -556,9 +556,9 @@ fn display_settings_menu_setup(
                                 ));
                                 // Display a button for each possible value
                                 for quality_setting in [
-                                    DisplayQuality::Low,
-                                    DisplayQuality::Medium,
-                                    DisplayQuality::High,
+                                    DisplayQualitySetting::Low,
+                                    DisplayQualitySetting::Medium,
+                                    DisplayQualitySetting::High,
                                 ] {
                                     let mut entity = parent.spawn((
                                         Button,
@@ -599,7 +599,7 @@ fn display_settings_menu_setup(
 
 fn sound_settings_menu_setup(
     mut commands: Commands,
-    volume: Res<Volume>,
+    volume: Res<VolumeSetting>,
     root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
@@ -657,9 +657,9 @@ fn sound_settings_menu_setup(
                                             ..button_node.clone()
                                         },
                                         BackgroundColor(NORMAL_BUTTON),
-                                        Volume(volume_setting),
+                                        VolumeSetting(volume_setting),
                                     ));
-                                    if *volume == Volume(volume_setting) {
+                                    if *volume == VolumeSetting(volume_setting) {
                                         entity.insert(SelectedOption);
                                     }
                                 }
@@ -679,7 +679,7 @@ fn sound_settings_menu_setup(
 
 fn name_settings_menu_setup(
     mut commands: Commands,
-    player_name: Res<PlayerName>,
+    player_name: Res<PlayerNameSetting>,
     root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {

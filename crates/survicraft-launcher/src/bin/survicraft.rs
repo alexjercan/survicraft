@@ -7,7 +7,7 @@ use std::{
 };
 use survicraft_client::{ClientConnection, ClientMetadata};
 use survicraft_common::{
-    PlayerName,
+    PlayerNameSetting,
     debug::{DebugPlugin, DebugPluginSet},
     main_menu::{
         ClientMultiplayerClickEvent, ClientPlayClickEvent, MainMenuAssets, MainMenuPlugin,
@@ -151,7 +151,7 @@ fn handle_play_button_pressed(
     mut ev_play: EventReader<ClientPlayClickEvent>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut mode: ResMut<Mode>,
-    player_name: Res<PlayerName>,
+    player_name: Res<PlayerNameSetting>,
 ) {
     for _ in ev_play.read() {
         next_state.set(GameStates::Playing);
@@ -181,7 +181,7 @@ fn handle_multiplayer_pressed(
     mut ev_multiplayer: EventReader<ClientMultiplayerClickEvent>,
     mut next_state: ResMut<NextState<GameStates>>,
     mut mode: ResMut<Mode>,
-    player_name: Res<PlayerName>,
+    player_name: Res<PlayerNameSetting>,
 ) {
     for event in ev_multiplayer.read() {
         next_state.set(GameStates::Playing);
