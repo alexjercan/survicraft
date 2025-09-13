@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy.workspace = true
+noise.workspace = true
 itertools.workspace = true
 bevy-inspector-egui.workspace = true
 iyes_perf_ui.workspace = true

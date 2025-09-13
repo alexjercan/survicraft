@@ -5,14 +5,15 @@ use std::{
     str::FromStr,
     time::Duration,
 };
+use survicraft_assets::prelude::*;
 use survicraft_client::{ClientConnection, ClientMetadata};
 use survicraft_common::{
     PlayerNameSetting,
-    debug::{DebugPlugin, DebugPluginSet},
     main_menu::{
-        ClientMultiplayerClickEvent, ClientPlayClickEvent, MainMenuAssets, MainMenuPlugin,
+        ClientMultiplayerClickEvent, ClientPlayClickEvent, MainMenuIcons, MainMenuPlugin,
         MainMenuPluginSet, MainMenuRoot,
     },
+    terrain::prelude::*,
 };
 use survicraft_server::ServerListener;
 
@@ -58,19 +59,17 @@ fn main() {
         tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
     });
 
-    app.add_plugins(DebugPlugin);
-    app.configure_sets(Update, DebugPluginSet);
-
     app.add_plugins(survicraft_protocol::ProtocolPlugin);
 
-    app.add_plugins(survicraft_assets::AssetsPlugin);
+    app.add_plugins(AssetsPlugin);
     app.configure_sets(
         Update,
-        survicraft_assets::AssetsPluginSet.run_if(in_state(GameStates::Loading)),
+        AssetsPluginSet.run_if(in_state(GameStates::Loading)),
     );
     app.add_systems(
         Update,
-        handle_assets_loaded.run_if(in_state(GameStates::Loading)),
+        handle_assets_loaded
+            .run_if(in_state(GameStates::Loading).and(resource_added::<MainMenuAssets>)),
     );
 
     app.add_plugins(TextInputPlugin);
@@ -106,29 +105,87 @@ fn main() {
 
 fn handle_assets_loaded(
     mut commands: Commands,
-    mut ev_assets: EventReader<survicraft_assets::AssetsLoadedEvent>,
     mut next_state: ResMut<NextState<GameStates>>,
-    game_assets: Option<Res<survicraft_assets::GameAssets>>,
+    assets: Res<MainMenuAssets>,
 ) {
-    for _ in ev_assets.read() {
-        info!("Assets loaded, switching to MainMenu state");
+    info!("Assets loaded, switching to MainMenu state");
 
-        next_state.set(GameStates::MainMenu);
+    next_state.set(GameStates::MainMenu);
 
-        let game_assets = game_assets.as_ref().expect("GameAssets resource not found");
-        commands.insert_resource(MainMenuAssets {
-            exit_icon: game_assets.exit_icon.clone(),
-            right_icon: game_assets.right_icon.clone(),
-            wrench_icon: game_assets.wrench_icon.clone(),
-        });
-    }
+    commands.insert_resource(MainMenuIcons {
+        exit_icon: assets.exit_icon.clone(),
+        right_icon: assets.right_icon.clone(),
+        wrench_icon: assets.wrench_icon.clone(),
+    });
+
+    // TODO: I want to load these from file, but for now, hardcode them
+    // with some kind of cool syntax like:
+    //
+    // [terrain]
+    //     id="deep_water"
+    //     name="Deep Water"
+    //     [generation]
+    //         elevation_min=None
+    //         elevation_max=0.25
+    //     [/generation]
+    // [/terrain]
+    commands.insert_resource(TerrainAssets::new(vec![
+        TileAsset {
+            id: "deep_water".to_string(),
+            name: "Deep Water".to_string(),
+            generation: TileGeneration {
+                elevation_min: None,
+                elevation_max: Some(0.25),
+            },
+        },
+        TileAsset {
+            id: "shallow_water".to_string(),
+            name: "Shallow Water".to_string(),
+            generation: TileGeneration {
+                elevation_min: Some(0.25),
+                elevation_max: Some(0.5),
+            },
+        },
+        TileAsset {
+            id: "sand".to_string(),
+            name: "Sand".to_string(),
+            generation: TileGeneration {
+                elevation_min: Some(0.5),
+                elevation_max: Some(0.55),
+            },
+        },
+        TileAsset {
+            id: "grass".to_string(),
+            name: "Grass".to_string(),
+            generation: TileGeneration {
+                elevation_min: Some(0.55),
+                elevation_max: Some(0.75),
+            },
+        },
+        TileAsset {
+            id: "hills".to_string(),
+            name: "Hills".to_string(),
+            generation: TileGeneration {
+                elevation_min: Some(0.75),
+                elevation_max: Some(0.9),
+            },
+        },
+        TileAsset {
+            id: "mountain".to_string(),
+            name: "Mountain".to_string(),
+            generation: TileGeneration {
+                elevation_min: Some(0.9),
+                elevation_max: None,
+            },
+        },
+    ]));
 }
 
 fn setup_menu(mut commands: Commands) {
     commands.spawn((
         Name::new("CameraMainMenuUI"),
         Camera2d,
-        // StateScoped(GameStates::MainMenu),
+        StateScoped(GameStates::MainMenu),
     ));
 
     commands.spawn((

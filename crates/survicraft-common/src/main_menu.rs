@@ -22,7 +22,7 @@ const TEXT_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
 pub struct MainMenuRoot;
 
 #[derive(Resource, Default)]
-pub struct MainMenuAssets {
+pub struct MainMenuIcons {
     pub exit_icon: Handle<Image>,
     pub right_icon: Handle<Image>,
     pub wrench_icon: Handle<Image>,
@@ -191,7 +191,7 @@ fn name_settings_menu_update(
 
 fn main_menu_setup(
     mut commands: Commands,
-    assets: Res<MainMenuAssets>,
+    assets: Res<MainMenuIcons>,
     root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     // Common style for all buttons on the screen

@@ -5,7 +5,10 @@ edition = "2024"
 
 [dependencies]
 bevy.workspace = true
+serde.workspace = true
+anyhow.workspace = true
 bevy_asset_loader.workspace = true
+bevy_common_assets.workspace = true
 
 [lints]
 workspace = true

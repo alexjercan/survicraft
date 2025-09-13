@@ -8,6 +8,17 @@
 //! The chunks are also entities that contain all the tiles within a certain radius.
 //!
 //! You can use the `debug` feature to enable debug visualization of the square grid.
+//!
+//! Tiles will be represented as
+//!
+//! A   B
+//! +---+
+//! |   |
+//! +---+
+//! C   D
+//!
+//! where each tile is a square with corners A, B, C, and D. We will anchor the tile at the center
+//! of the square.
 
 use bevy::{platform::collections::HashMap, prelude::*};
 // use pathfinding::prelude::astar;
@@ -15,28 +26,32 @@ use bevy::{platform::collections::HashMap, prelude::*};
 #[cfg(feature = "debug")]
 use self::debug::{DebugPlugin, DebugSet};
 
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct TileCoord(pub IVec2);
+
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct LocalTileCoord(pub IVec2);
+
 /// The TileDiscoverEvent is used to trigger the discovery of square tiles in the map.
 /// The position is given in world coordinates, and the event is generic over a component type `C`
 /// that can be constructed from a `IVec2` coordinate.
 #[derive(Event, Clone, Debug)]
-pub struct TileDiscoverEvent<C: From<IVec2>> {
+pub struct TileDiscoverEvent {
     /// The position in world coordinates where the discovery event occurs.
     pub pos: Vec2,
-    _marker: std::marker::PhantomData<C>,
 }
 
-impl<C: From<IVec2>> TileDiscoverEvent<C> {
+impl TileDiscoverEvent {
     /// Creates a new TileDiscoverEvent with the specified position.
     pub fn new(pos: Vec2) -> Self {
         Self {
             pos,
-            _marker: std::marker::PhantomData,
         }
     }
 }
 
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-struct ChunkCoord(pub IVec2);
+#[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
+pub struct ChunkCoord(pub IVec2);
 
 #[derive(Resource, Debug, Clone)]
 pub struct TileMapStorage {
@@ -63,8 +78,8 @@ impl TileMapStorage {
 
     fn chunk_tiles(&self, center: IVec2) -> Vec<IVec2> {
         let mut tiles = Vec::new();
-        for x in -((self.chunk_radius as i32))..=(self.chunk_radius as i32) {
-            for y in -((self.chunk_radius as i32))..=(self.chunk_radius as i32) {
+        for x in -(self.chunk_radius as i32)..=(self.chunk_radius as i32) {
+            for y in -(self.chunk_radius as i32)..=(self.chunk_radius as i32) {
                 let tile_x = center.x + x;
                 let tile_y = center.y + y;
                 tiles.push(IVec2::new(tile_x, tile_y));
@@ -75,23 +90,20 @@ impl TileMapStorage {
 
     fn tile_to_center(&self, tile: &IVec2) -> IVec2 {
         let step = self.chunk_radius as i32 * 2 + 1;
-        IVec2::new(
-            (tile.x / step) * step,
-            (tile.y / step) * step,
-        )
+        ((tile + tile.signum() * self.chunk_radius as i32) / step) * step
     }
 
     pub fn world_pos_to_tile(&self, position: Vec2) -> IVec2 {
         IVec2::new(
-            (position.x / self.tile_size.x).floor() as i32,
-            (position.y / self.tile_size.y).floor() as i32,
+            ((position.x + self.tile_size.x / 2.0) / self.tile_size.x).floor() as i32,
+            ((position.y + self.tile_size.y / 2.0) / self.tile_size.y).floor() as i32,
         )
     }
 
     pub fn tile_to_world_pos(&self, tile: IVec2) -> Vec2 {
         Vec2::new(
-            tile.x as f32 * self.tile_size.x + self.tile_size.x / 2.0,
-            tile.y as f32 * self.tile_size.y + self.tile_size.y / 2.0,
+            tile.x as f32 * self.tile_size.x,
+            tile.y as f32 * self.tile_size.y,
         )
     }
 
@@ -125,32 +137,34 @@ pub struct TileMapSet;
 /// it will add the `C` component to each tile entity.
 /// The tiles will be grouped into chunks, and each chunk will be represented by a `ChunkCoord`
 /// component. Each tile in the chunk will be parented to the chunk entity.
-pub struct TileMapPlugin<C: From<IVec2>> {
+pub struct TileMapPlugin {
     tile_size: Vec2,
     chunk_radius: u32,
     discover_radius: u32,
-    _marker: std::marker::PhantomData<C>,
 }
 
-impl<C: From<IVec2>> TileMapPlugin<C> {
+impl TileMapPlugin {
     pub fn new(tile_size: Vec2, chunk_radius: u32, discover_radius: u32) -> Self {
         Self {
             tile_size,
             chunk_radius,
             discover_radius,
-            _marker: std::marker::PhantomData,
         }
     }
 }
 
-impl<C: Component + From<IVec2> + Send + Sync + 'static> Plugin for TileMapPlugin<C> {
+impl Plugin for TileMapPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<ChunkCoord>()
+            .register_type::<TileCoord>()
+            .register_type::<LocalTileCoord>();
+
         #[cfg(feature = "debug")]
         app.add_plugins(DebugPlugin);
         #[cfg(feature = "debug")]
         app.configure_sets(Update, DebugSet.in_set(TileMapSet));
 
-        app.add_event::<TileDiscoverEvent<C>>();
+        app.add_event::<TileDiscoverEvent>();
 
         app.insert_resource(TileMapStorage {
             tile_size: self.tile_size,
@@ -160,14 +174,14 @@ impl<C: Component + From<IVec2> + Send + Sync + 'static> Plugin for TileMapPlugi
             tiles: HashMap::default(),
         });
 
-        app.add_systems(Update, (generate_chunks::<C>).in_set(TileMapSet).chain());
+        app.add_systems(Update, (generate_chunks).in_set(TileMapSet).chain());
     }
 }
 
-fn generate_chunks<C: Component + From<IVec2> + Send + Sync + 'static>(
+fn generate_chunks(
     mut commands: Commands,
     mut storage: ResMut<TileMapStorage>,
-    mut ev_discover: EventReader<TileDiscoverEvent<C>>,
+    mut ev_discover: EventReader<TileDiscoverEvent>,
 ) {
     for ev in ev_discover.read() {
         let tile = storage.world_pos_to_tile(ev.pos);
@@ -184,20 +198,22 @@ fn generate_chunks<C: Component + From<IVec2> + Send + Sync + 'static>(
                     ChunkCoord(center),
                     Transform::from_translation(pos),
                     Visibility::default(),
-                    Name::new("HexChunk"),
+                    Name::new("TileChunk"),
                 ))
                 .id();
             storage.insert_chunk(center, chunk_entity);
 
             for tile in storage.chunk_tiles(center) {
-                let pos = storage.tile_to_world_pos(tile - center).extend(0.0).xzy();
+                let pos = storage.tile_to_world_pos(tile - center);
+                let local = tile - center;
 
                 let tile_entity = commands
                     .spawn((
-                        C::from(tile),
-                        Transform::from_translation(pos),
+                        TileCoord(tile),
+                        LocalTileCoord(local),
+                        Transform::from_translation(pos.extend(0.0).xzy()),
                         Visibility::default(),
-                        Name::new("Hex"),
+                        Name::new("Tile"),
                     ))
                     .id();
                 commands.entity(chunk_entity).add_child(tile_entity);
@@ -228,7 +244,7 @@ mod debug {
     }
 
     fn toggle(kbd: Res<ButtonInput<KeyCode>>, mut show_grid: ResMut<ShowGrid>) {
-        if kbd.just_pressed(KeyCode::F12) {
+        if kbd.just_pressed(KeyCode::F11) {
             show_grid.0 = !show_grid.0;
         }
     }
@@ -272,5 +288,133 @@ mod debug {
             let end = corners[(i + 1) % 4];
             gizmos.line(start, end, color);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tile_to_center() {
+        let storage = TileMapStorage {
+            tile_size: Vec2::splat(1.0),
+            chunk_radius: 2,
+            discover_radius: 1,
+            chunks: HashMap::default(),
+            tiles: HashMap::default(),
+        };
+
+        assert_eq!(storage.tile_to_center(&IVec2::new(0, 0)), IVec2::new(0, 0));
+        assert_eq!(storage.tile_to_center(&IVec2::new(1, 1)), IVec2::new(0, 0));
+        assert_eq!(storage.tile_to_center(&IVec2::new(2, 2)), IVec2::new(0, 0));
+        assert_eq!(storage.tile_to_center(&IVec2::new(3, 3)), IVec2::new(5, 5));
+        assert_eq!(storage.tile_to_center(&IVec2::new(-1, -1)), IVec2::new(0, 0));
+        assert_eq!(storage.tile_to_center(&IVec2::new(-3, -3)), IVec2::new(-5, -5));
+    }
+
+    #[test]
+    fn test_world_pos_to_tile() {
+        let storage = TileMapStorage {
+            tile_size: Vec2::splat(1.0),
+            chunk_radius: 2,
+            discover_radius: 1,
+            chunks: HashMap::default(),
+            tiles: HashMap::default(),
+        };
+
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(0.0, 0.0)), IVec2::new(0, 0));
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(0.4, 0.4)), IVec2::new(0, 0));
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(0.5, 0.5)), IVec2::new(1, 1));
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(1.4, 1.4)), IVec2::new(1, 1));
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(-0.4, -0.4)), IVec2::new(0, 0));
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(-0.6, -0.6)), IVec2::new(-1, -1));
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(-1.4, -1.4)), IVec2::new(-1, -1));
+
+        assert_eq!(storage.world_pos_to_tile(Vec2::new(-0.5, -0.5)), IVec2::new(0, 0));
+    }
+
+    #[test]
+    fn test_tile_to_world_pos() {
+        let storage = TileMapStorage {
+            tile_size: Vec2::splat(1.0),
+            chunk_radius: 2,
+            discover_radius: 1,
+            chunks: HashMap::default(),
+            tiles: HashMap::default(),
+        };
+
+        assert_eq!(storage.tile_to_world_pos(IVec2::new(0, 0)), Vec2::new(0.0, 0.0));
+        assert_eq!(storage.tile_to_world_pos(IVec2::new(1, 1)), Vec2::new(1.0, 1.0));
+        assert_eq!(storage.tile_to_world_pos(IVec2::new(-1, -1)), Vec2::new(-1.0, -1.0));
+        assert_eq!(storage.tile_to_world_pos(IVec2::new(5, 5)), Vec2::new(5.0, 5.0));
+    }
+
+    #[test]
+    fn test_discover_chunks() {
+        let storage = TileMapStorage {
+            tile_size: Vec2::splat(1.0),
+            chunk_radius: 2,
+            discover_radius: 1,
+            chunks: HashMap::default(),
+            tiles: HashMap::default(),
+        };
+
+        let center = IVec2::new(0, 0);
+        let chunks = storage.discover_chunks(center);
+        let expected = vec![
+            IVec2::new(-5, -5),
+            IVec2::new(-5, 0),
+            IVec2::new(-5, 5),
+            IVec2::new(0, -5),
+            IVec2::new(0, 0),
+            IVec2::new(0, 5),
+            IVec2::new(5, -5),
+            IVec2::new(5, 0),
+            IVec2::new(5, 5),
+        ];
+        assert_eq!(chunks, expected);
+    }
+
+    #[test]
+    fn test_chunk_tiles() {
+        let storage = TileMapStorage {
+            tile_size: Vec2::splat(1.0),
+            chunk_radius: 2,
+            discover_radius: 1,
+            chunks: HashMap::default(),
+            tiles: HashMap::default(),
+        };
+
+        let center = IVec2::new(0, 0);
+        let tiles = storage.chunk_tiles(center);
+        let expected = vec![
+            IVec2::new(-2, -2),
+            IVec2::new(-2, -1),
+            IVec2::new(-2, 0),
+            IVec2::new(-2, 1),
+            IVec2::new(-2, 2),
+            IVec2::new(-1, -2),
+            IVec2::new(-1, -1),
+            IVec2::new(-1, 0),
+            IVec2::new(-1, 1),
+            IVec2::new(-1, 2),
+            IVec2::new(0, -2),
+            IVec2::new(0, -1),
+            IVec2::new(0, 0),
+            IVec2::new(0, 1),
+            IVec2::new(0, 2),
+            IVec2::new(1, -2),
+            IVec2::new(1, -1),
+            IVec2::new(1, 0),
+            IVec2::new(1, 1),
+            IVec2::new(1, 2),
+            IVec2::new(2, -2),
+            IVec2::new(2, -1),
+            IVec2::new(2, 0),
+            IVec2::new(2, 1),
+            IVec2::new(2, 2),
+        ];
+        assert_eq!(tiles, expected);
     }
 }
