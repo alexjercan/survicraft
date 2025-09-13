@@ -42,7 +42,7 @@ impl Plugin for ClientPlugin {
         app.add_plugins(TerrainRenderPlugin::new(
             Vec2::splat(1.0),
             4,
-            1.0,
+            5.0,
         ));
         app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
         app.add_plugins(controller::WASDCameraControllerPlugin);

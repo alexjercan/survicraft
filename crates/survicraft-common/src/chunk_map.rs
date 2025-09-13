@@ -10,7 +10,7 @@ use bevy::{
         world::CommandQueue,
     },
     prelude::*,
-    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
+    tasks::{AsyncComputeTaskPool, Task, block_on, futures_lite::future},
 };
 use itertools::Itertools;
 
@@ -109,7 +109,12 @@ fn create_task<T, U, F>(
     F: Resource + ChunkMapFunction<T, U> + Clone + Send + Sync + 'static,
 {
     let thread_pool = AsyncComputeTaskPool::get();
-    for (&chunk_entity, chunk) in q_point.iter().chunk_by(|(_, _, ChildOf(e))| e).into_iter() {
+    for (chunk_entity, chunk) in q_point
+        .iter()
+        .sorted_by_key(|(_, _, ChildOf(e))| *e)
+        .chunk_by(|(_, _, ChildOf(e))| *e)
+        .into_iter()
+    {
         let chunk = chunk
             .map(|(child_entity, query_data, _)| {
                 let input = T::from_query_item(query_data);

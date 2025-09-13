@@ -32,6 +32,9 @@ pub struct TileCoord(pub IVec2);
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct LocalTileCoord(pub IVec2);
 
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct TileBorder;
+
 /// The TileDiscoverEvent is used to trigger the discovery of square tiles in the map.
 /// The position is given in world coordinates, and the event is generic over a component type `C`
 /// that can be constructed from a `IVec2` coordinate.
@@ -88,6 +91,21 @@ impl TileMapStorage {
         tiles
     }
 
+    fn chunk_border(&self, center: IVec2) -> Vec<IVec2> {
+        let mut border = Vec::new();
+        let r = self.chunk_radius as i32 + 1;
+
+        for x in -r..=r {
+            border.push(IVec2::new(center.x + x, center.y - r));
+            border.push(IVec2::new(center.x + x, center.y + r));
+        }
+        for y in (-r + 1)..=(r - 1) {
+            border.push(IVec2::new(center.x - r, center.y + y));
+            border.push(IVec2::new(center.x + r, center.y + y));
+        }
+        border
+    }
+
     fn tile_to_center(&self, tile: &IVec2) -> IVec2 {
         let step = self.chunk_radius as i32 * 2 + 1;
         ((tile + tile.signum() * self.chunk_radius as i32) / step) * step
@@ -113,14 +131,6 @@ impl TileMapStorage {
 
     fn insert_chunk(&mut self, center: IVec2, chunk: Entity) {
         self.chunks.insert(center, chunk);
-    }
-
-    fn insert_tile(&mut self, tile: IVec2, entity: Entity) {
-        self.tiles.insert(tile, entity);
-    }
-
-    pub fn get_tile(&self, tile: IVec2) -> Option<&Entity> {
-        self.tiles.get(&tile)
     }
 
     // TODO: implement pathfinding
@@ -217,7 +227,23 @@ fn generate_chunks(
                     ))
                     .id();
                 commands.entity(chunk_entity).add_child(tile_entity);
-                storage.insert_tile(tile, tile_entity);
+            }
+
+            for tile in storage.chunk_border(center) {
+                let pos = storage.tile_to_world_pos(tile - center);
+                let local = tile - center;
+
+                let tile_entity = commands
+                    .spawn((
+                        TileBorder,
+                        TileCoord(tile),
+                        LocalTileCoord(local),
+                        Transform::from_translation(pos.extend(0.0).xzy()),
+                        Visibility::default(),
+                        Name::new("TileBorder"),
+                    ))
+                    .id();
+                commands.entity(chunk_entity).add_child(tile_entity);
             }
         }
     }
@@ -416,5 +442,45 @@ mod tests {
             IVec2::new(2, 2),
         ];
         assert_eq!(tiles, expected);
+    }
+
+    fn test_chunk_border() {
+        let storage = TileMapStorage {
+            tile_size: Vec2::splat(1.0),
+            chunk_radius: 2,
+            discover_radius: 1,
+            chunks: HashMap::default(),
+            tiles: HashMap::default(),
+        };
+
+        let center = IVec2::new(0, 0);
+        let border = storage.chunk_border(center);
+        let expected = vec![
+            IVec2::new(-3, -3),
+            IVec2::new(-2, -3),
+            IVec2::new(-1, -3),
+            IVec2::new(0, -3),
+            IVec2::new(1, -3),
+            IVec2::new(2, -3),
+            IVec2::new(3, -3),
+            IVec2::new(-3, 3),
+            IVec2::new(-2, 3),
+            IVec2::new(-1, 3),
+            IVec2::new(0, 3),
+            IVec2::new(1, 3),
+            IVec2::new(2, 3),
+            IVec2::new(3, 3),
+            IVec2::new(-3, -2),
+            IVec2::new(-3, -1),
+            IVec2::new(-3, 0),
+            IVec2::new(-3, 1),
+            IVec2::new(-3, 2),
+            IVec2::new(3, -2),
+            IVec2::new(3, -1),
+            IVec2::new(3, 0),
+            IVec2::new(3, 1),
+            IVec2::new(3, 2),
+        ];
+        assert_eq!(border, expected);
     }
 }
