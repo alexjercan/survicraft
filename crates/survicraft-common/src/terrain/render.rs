@@ -88,7 +88,6 @@ impl HeightMapLayout {
 
             let base = Vec2::new(base_x, base_y);
 
-            // Vertices: bottom-left, bottom-right, top-left, top-right
             let v0 = base + Vec2::new(-half_size.x, -half_size.y);
             let v1 = base + Vec2::new(half_size.x, -half_size.y);
             let v2 = base + Vec2::new(-half_size.x, half_size.y);
@@ -106,9 +105,11 @@ impl HeightMapLayout {
             if ns.len() < 4 {
                 continue;
             }
-
-            let h = ns.iter().sum::<f64>()
-                / 4.0;
+            let h = if ns.iter().any(|n| *n <= 0.0) {
+                0.0
+            } else {
+                ns.iter().sum::<f64>() / 4.0
+            };
             let v0 = Vec3::new(v0.x, h as f32, v0.y);
 
             let ns = vec![
@@ -123,8 +124,11 @@ impl HeightMapLayout {
             if ns.len() < 4 {
                 continue;
             }
-            let h = ns.iter().sum::<f64>()
-                / 4.0;
+            let h = if ns.iter().any(|n| *n <= 0.0) {
+                0.0
+            } else {
+                ns.iter().sum::<f64>() / 4.0
+            };
             let v1 = Vec3::new(v1.x, h as f32, v1.y);
 
             let ns = vec![
@@ -139,9 +143,11 @@ impl HeightMapLayout {
             if ns.len() < 4 {
                 continue;
             }
-
-            let h = ns.iter().sum::<f64>()
-                / 4.0;
+            let h = if ns.iter().any(|n| *n <= 0.0) {
+                0.0
+            } else {
+                ns.iter().sum::<f64>() / 4.0
+            };
             let v2 = Vec3::new(v2.x, h as f32, v2.y);
 
             let ns = vec![
@@ -156,9 +162,11 @@ impl HeightMapLayout {
             if ns.len() < 4 {
                 continue;
             }
-
-            let h = ns.iter().sum::<f64>()
-                / 4.0;
+            let h = if ns.iter().any(|n| *n <= 0.0) {
+                0.0
+            } else {
+                ns.iter().sum::<f64>() / 4.0
+            };
             let v3 = Vec3::new(v3.x, h as f32, v3.y);
 
             let start_index = positions.len() as u32;

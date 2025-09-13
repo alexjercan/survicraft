@@ -26,8 +26,7 @@ impl TerrainGenerationPlugin {
 
 impl Plugin for TerrainGenerationPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .register_type::<Tile>()
+        app.register_type::<Tile>()
             .register_type::<TileNoiseHeight>()
             .register_type::<TileTopHeight>();
 
@@ -47,7 +46,7 @@ impl Plugin for TerrainGenerationPlugin {
 
 fn handle_chunk(
     mut commands: Commands,
-    q_tiles: Query<(Entity, &TileNoiseHeight, &ChildOf), (With<TileCoord>, Without<Tile>)>,
+    q_tiles: Query<(Entity, &TileNoiseHeight), (With<TileCoord>, Without<Tile>)>,
     assets: Res<TerrainAssets>,
 ) {
     if q_tiles.is_empty() {
@@ -55,20 +54,17 @@ fn handle_chunk(
     }
     debug!("Handling tile for {} tiles", q_tiles.iter().len());
 
-    // TODO: Might be able to do this without needing chunking
-    for (_, chunk) in q_tiles.iter().chunk_by(|(_, _, ChildOf(e))| e).into_iter() {
-        for (entity, height, _) in chunk {
-            let height = **height;
+    for (entity, height) in q_tiles {
+        let height = **height;
 
-            let kind = assets.get_tile(height);
+        let kind = assets.get_tile(height);
 
-            match kind {
-                Some(kind) => {
-                    commands.entity(entity).insert(Tile(kind));
-                }
-                None => {
-                    warn!("No tile found for height: {}", height);
-                }
+        match kind {
+            Some(kind) => {
+                commands.entity(entity).insert(Tile(kind));
+            }
+            None => {
+                warn!("No tile found for height: {}", height);
             }
         }
     }

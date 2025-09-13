@@ -35,13 +35,13 @@ impl Plugin for ClientPlugin {
         app.add_plugins(TerrainGenerationPlugin::new(
             0,
             Vec2::splat(1.0),
-            4,
-            1,
+            16,
+            2,
         ));
         app.configure_sets(Update, TerrainGenerationPluginSet.in_set(ClientPluginSet));
         app.add_plugins(TerrainRenderPlugin::new(
             Vec2::splat(1.0),
-            4,
+            16,
             5.0,
         ));
         app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
