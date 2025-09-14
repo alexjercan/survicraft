@@ -28,7 +28,7 @@ fn handle_spawn_player(
         if is_controlled {
             info!("Adding InputMap to controlled and predicted entity {entity:?}");
             commands.entity(entity).insert(
-                InputMap::default()
+                InputMap::new([(CharacterAction::Jump, KeyCode::Space)])
                     .with_dual_axis(CharacterAction::Move, GamepadStick::LEFT)
                     .with_dual_axis(CharacterAction::Move, VirtualDPad::wasd()),
             );

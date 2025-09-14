@@ -56,34 +56,34 @@ pub fn apply_character_action(
     // How much velocity can change in a single tick given the max acceleration.
     let max_velocity_delta_per_tick = MAX_ACCELERATION * time.delta_secs();
 
-    // // Handle jumping.
-    // if action_state.just_pressed(&CharacterAction::Jump) {
-    //     let ray_cast_origin = character.position.0
-    //         + Vec3::new(
-    //             0.0,
-    //             -CHARACTER_CAPSULE_HEIGHT / 2.0 - CHARACTER_CAPSULE_RADIUS,
-    //             0.0,
-    //         );
+    // Handle jumping.
+    if action_state.just_pressed(&CharacterAction::Jump) {
+        let ray_cast_origin = character.position.0
+            + Vec3::new(
+                0.0,
+                -CHARACTER_CAPSULE_HEIGHT / 2.0 - CHARACTER_CAPSULE_RADIUS,
+                0.0,
+            );
 
-    //     // Only jump if the character is on the ground.
-    //     //
-    //     // Check if we are touching the ground by sending a ray from the bottom
-    //     // of the character downwards.
-    //     if spatial_query
-    //         .cast_ray(
-    //             ray_cast_origin,
-    //             Dir3::NEG_Y,
-    //             0.01,
-    //             true,
-    //             &SpatialQueryFilter::from_excluded_entities([character.entity]),
-    //         )
-    //         .is_some()
-    //     {
-    //         character
-    //             .external_impulse
-    //             .apply_impulse(Vec3::new(0.0, 5.0, 0.0));
-    //     }
-    // }
+        // Only jump if the character is on the ground.
+        //
+        // Check if we are touching the ground by sending a ray from the bottom
+        // of the character downwards.
+        if spatial_query
+            .cast_ray(
+                ray_cast_origin,
+                Dir3::NEG_Y,
+                0.01,
+                true,
+                &SpatialQueryFilter::from_excluded_entities([character.entity]),
+            )
+            .is_some()
+        {
+            character
+                .external_impulse
+                .apply_impulse(Vec3::new(0.0, 5.0, 0.0));
+        }
+    }
 
     // Handle moving.
     let move_dir = action_state

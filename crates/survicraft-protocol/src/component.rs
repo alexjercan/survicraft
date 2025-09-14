@@ -16,9 +16,11 @@ pub fn register_components(app: &mut App) {
     app.register_component::<Name>()
         .add_prediction(PredictionMode::Once)
         .add_interpolation(InterpolationMode::Once);
+
     app.register_component::<PlayerId>()
         .add_prediction(PredictionMode::Once)
         .add_interpolation(InterpolationMode::Once);
+
     app.register_component::<PlayerName>()
         .add_prediction(PredictionMode::Once)
         .add_interpolation(InterpolationMode::Once);

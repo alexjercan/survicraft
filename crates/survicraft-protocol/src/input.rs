@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub enum CharacterAction {
     #[actionlike(DualAxis)]
     Move,
+    Jump,
 }
 
 pub fn register_input(app: &mut App) {
