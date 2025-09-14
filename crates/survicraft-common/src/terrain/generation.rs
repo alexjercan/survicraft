@@ -1,7 +1,6 @@
 use super::{components::*, planet::*, resources::*};
 use crate::{chunk_map::prelude::*, tilemap::prelude::*};
 use bevy::prelude::*;
-use itertools::Itertools;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TerrainGenerationPluginSet;
@@ -27,8 +26,7 @@ impl TerrainGenerationPlugin {
 impl Plugin for TerrainGenerationPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Tile>()
-            .register_type::<TileNoiseHeight>()
-            .register_type::<TileTopHeight>();
+            .register_type::<TileNoiseHeight>();
 
         app.add_plugins(TileMapPlugin::new(
             self.tile_size,
