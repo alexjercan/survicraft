@@ -8,6 +8,7 @@ pub mod chunk_map;
 pub mod tilemap;
 pub mod terrain;
 pub mod camera;
+pub mod player;
 
 // TODO: Might want to have something like a config module where I put the main menu and stuff that
 // is not necessarily "helpers" but more like "core app stuff"

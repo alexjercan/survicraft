@@ -80,5 +80,8 @@ impl Plugin for TerrainPlugin {
         app.configure_sets(Update, TerrainGenerationPluginSet.in_set(TerrainPluginSet));
         app.add_plugins(TerrainGeometryPlugin::new(self.tile_size, self.max_height));
         app.configure_sets(Update, TerrainGeometryPluginSet.in_set(TerrainPluginSet));
+
+        app.add_plugins(TerrainColliderPlugin);
+        app.configure_sets(Update, TerrainColliderPluginSet.in_set(TerrainPluginSet));
     }
 }

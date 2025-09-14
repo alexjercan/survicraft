@@ -6458,6 +6458,7 @@ dependencies = [
 name = "survicraft-client"
 version = "0.1.0"
 dependencies = [
+ "avian3d",
  "bevy",
  "bevy_simple_text_input",
  "leafwing-input-manager",
@@ -6476,7 +6477,9 @@ dependencies = [
  "bevy_simple_text_input",
  "itertools 0.14.0",
  "iyes_perf_ui",
+ "leafwing-input-manager",
  "noise",
+ "survicraft-protocol",
 ]
 
 [[package]]
@@ -6499,6 +6502,7 @@ dependencies = [
 name = "survicraft-protocol"
 version = "0.1.0"
 dependencies = [
+ "avian3d",
  "bevy",
  "leafwing-input-manager",
  "lightyear",
@@ -6510,7 +6514,9 @@ dependencies = [
 name = "survicraft-server"
 version = "0.1.0"
 dependencies = [
+ "avian3d",
  "bevy",
+ "leafwing-input-manager",
  "lightyear",
  "survicraft-common",
  "survicraft-protocol",

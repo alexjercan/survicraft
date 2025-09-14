@@ -1,5 +1,7 @@
 mod chat;
 mod network;
+mod player;
+
 // For debugging purposes
 mod controller;
 
@@ -33,6 +35,9 @@ impl Plugin for ClientPlugin {
 
         app.add_plugins(TerrainRenderPlugin::default());
         app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
+
+        app.add_plugins(player::PlayerPlugin);
+        app.configure_sets(Update, player::PlayerPluginSet.in_set(ClientPluginSet));
 
         // For debugging purposes
         app.add_plugins(controller::WASDCameraControllerPlugin);

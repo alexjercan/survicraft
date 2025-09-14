@@ -1,3 +1,4 @@
+use avian3d::prelude::*;
 use bevy::{
     diagnostic::DiagnosticsPlugin,
     log::{Level, LogPlugin},
@@ -47,6 +48,14 @@ pub fn new_gui_app() -> App {
 
     #[cfg(feature = "debug")]
     app.add_plugins(DebugPlugin);
+
+    app.add_plugins(
+        PhysicsPlugins::default()
+            .build()
+            .disable::<PhysicsInterpolationPlugin>()
+            // disable Sleeping plugin as it can mess up physics rollbacks
+            .disable::<SleepingPlugin>(),
+    );
 
     app
 }

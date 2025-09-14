@@ -41,6 +41,7 @@ fn generate_chunk_collider(
         commands.entity(entity).insert((
             ChunkColliderReady,
             Collider::trimesh_from_mesh(mesh).unwrap(),
+            RigidBody::Static,
         ));
     }
 }

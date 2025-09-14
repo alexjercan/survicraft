@@ -1,15 +1,12 @@
 mod chat;
 mod network;
+mod player;
 
 use bevy::prelude::*;
-use lightyear::prelude::*;
-use survicraft_protocol::{
-    component::{PlayerId, PlayerName},
-    message::ClientMetaMessage,
-};
+
+use survicraft_common::tilemap::prelude::*;
 
 pub use network::ServerListener;
-use survicraft_common::{terrain::prelude::*, tilemap::prelude::*};
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServerPluginSet;
@@ -24,42 +21,13 @@ impl Plugin for ServerPlugin {
         app.add_plugins(network::NetworkPlugin);
         app.configure_sets(Update, network::NetworkPluginSet.in_set(ServerPluginSet));
 
-        app.add_plugins(TerrainColliderPlugin);
-        app.configure_sets(Update, TerrainColliderPluginSet.in_set(ServerPluginSet));
-
-        app.add_systems(Update, (handle_spawn_player,).in_set(ServerPluginSet));
+        app.add_plugins(player::PlayerPlugin);
+        app.configure_sets(Update, player::PlayerPluginSet.in_set(ServerPluginSet));
 
         app.add_systems(
             Update,
             create_a_single_test_chunk.in_set(ServerPluginSet),
         );
-    }
-}
-
-fn handle_spawn_player(
-    mut commands: Commands,
-    mut q_receiver: Query<
-        (Entity, &RemoteId, &mut MessageReceiver<ClientMetaMessage>),
-        Without<Client>,
-    >,
-) {
-    for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
-        for message in receiver.receive() {
-            info!("Client {:?} set their name to {}", peer, message.username);
-
-            commands.spawn((
-                Name::new(format!("Player {}", message.username)),
-                PlayerName(message.username.clone()),
-                PlayerId(*peer),
-                Replicate::to_clients(NetworkTarget::All),
-                PredictionTarget::to_clients(NetworkTarget::Single(*peer)),
-                InterpolationTarget::to_clients(NetworkTarget::AllExceptSingle(*peer)),
-                ControlledBy {
-                    owner: entity,
-                    lifetime: Lifetime::default(),
-                },
-            ));
-        }
     }
 }
 
