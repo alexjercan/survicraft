@@ -9,6 +9,13 @@ description = "Simple Survival Multiplayer Game"
 categories = ["games"]
 exclude = ["dist", "build", "assets", "credits"]
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "survicraft"
+path = "src/bin/survicraft.rs"
+
 [dependencies]
 bevy = {version = "0.16.1", features = [
   "serialize",
@@ -103,3 +110,9 @@ type_complexity = "allow"
 
 [build-dependencies]
 embed-resource = "1"
+
+[features]
+debug = []
+dev = [
+    "bevy/dynamic_linking", "debug"
+]

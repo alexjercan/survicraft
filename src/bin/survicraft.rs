@@ -1,4 +1,6 @@
+use bevy::prelude::*;
 use clap::Parser;
+use survicraft::prelude::*;
 
 #[derive(Parser)]
 #[command(name = "survicraft")]
@@ -8,4 +10,8 @@ struct Cli;
 
 fn main() {
     let _ = Cli::parse();
+
+    let mut app = new_gui_app();
+    app.add_plugins(LauncherPlugin);
+    app.run();
 }
