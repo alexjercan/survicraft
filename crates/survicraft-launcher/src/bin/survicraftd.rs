@@ -4,7 +4,7 @@ use survicraft_server::ServerListener;
 
 use clap::Parser;
 use lightyear::prelude::server::ServerPlugins;
-use survicraft_common::setup::new_headless_app;
+use survicraft_common::{setup::new_headless_app, terrain::prelude::*};
 use survicraft_protocol::FIXED_TIMESTEP_HZ;
 
 #[derive(Parser)]
@@ -21,6 +21,11 @@ fn main() {
         tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
     });
     app.add_plugins(survicraft_protocol::ProtocolPlugin);
+
+    // Maybe will have a `common` plugin later
+    app.add_plugins(TerrainPlugin::default().with_seed(0));
+    app.configure_sets(Update, TerrainPluginSet);
+
     app.add_plugins(survicraft_server::ServerPlugin);
 
     app.add_systems(Startup, startup);

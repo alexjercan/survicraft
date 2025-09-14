@@ -9,8 +9,8 @@ use bevy::{
 
 use crate::{terrain::{prelude::*, CHUNK_RADIUS, TILE_SIZE}, tilemap::prelude::*};
 
-// #[cfg(feature = "debug")]
-// use self::debug::*;
+#[cfg(feature = "debug")]
+use self::debug::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TerrainRenderPluginSet;
@@ -42,10 +42,10 @@ impl Plugin for TerrainRenderPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<RenderSettings>();
 
-        // #[cfg(feature = "debug")]
-        // app.add_plugins(DebugPlugin);
-        // #[cfg(feature = "debug")]
-        // app.configure_sets(Update, DebugPluginSet.in_set(TerrainRenderPluginSet));
+        #[cfg(feature = "debug")]
+        app.add_plugins(DebugPlugin);
+        #[cfg(feature = "debug")]
+        app.configure_sets(Update, DebugPluginSet.in_set(TerrainRenderPluginSet));
 
         app.insert_resource(RenderSettings::new(
             self.tile_size,
@@ -143,5 +143,68 @@ pub struct ChunkMaterial {
 impl MaterialExtension for ChunkMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/tile_chunk.wgsl".into()
+    }
+}
+
+#[cfg(feature = "debug")]
+mod debug {
+    use super::*;
+    use bevy::{
+        pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
+        prelude::*,
+    };
+
+    #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
+    struct ShowGrid(pub bool);
+
+    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+    pub struct DebugPluginSet;
+
+    pub struct DebugPlugin;
+
+    impl Plugin for DebugPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_plugins(WireframePlugin::default())
+                .insert_resource(WireframeConfig {
+                    global: false,
+                    default_color: Color::WHITE,
+                });
+            app.insert_resource(ShowGrid(true));
+            app.add_systems(Update, (toggle, draw_grid, undraw_grid).in_set(DebugPluginSet));
+        }
+    }
+
+    fn toggle(kbd: Res<ButtonInput<KeyCode>>, mut show_grid: ResMut<ShowGrid>) {
+        if kbd.just_pressed(KeyCode::F11) {
+            show_grid.0 = !show_grid.0;
+        }
+    }
+
+    fn draw_grid(
+        mut commands: Commands,
+        show_grid: Res<ShowGrid>,
+        q_meshes: Query<Entity, (With<ChunkMesh>, Without<Wireframe>)>,
+    ) {
+        if !**show_grid {
+            return;
+        }
+
+        for entity in q_meshes.iter() {
+            commands.entity(entity).insert(Wireframe);
+        }
+    }
+
+    fn undraw_grid(
+        mut commands: Commands,
+        show_grid: Res<ShowGrid>,
+        q_meshes: Query<Entity, (With<ChunkMesh>, With<Wireframe>)>,
+    ) {
+        if **show_grid {
+            return;
+        }
+
+        for entity in q_meshes.iter() {
+            commands.entity(entity).remove::<Wireframe>();
+        }
     }
 }
