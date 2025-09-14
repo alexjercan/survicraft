@@ -7,7 +7,7 @@ use bevy::{
     },
 };
 
-use crate::{terrain::prelude::*, tilemap::prelude::*};
+use crate::{terrain::{prelude::*, CHUNK_RADIUS, TILE_SIZE}, tilemap::prelude::*};
 
 // #[cfg(feature = "debug")]
 // use self::debug::*;
@@ -18,6 +18,15 @@ pub struct TerrainRenderPluginSet;
 pub struct TerrainRenderPlugin {
     tile_size: Vec2,
     chunk_radius: u32,
+}
+
+impl Default for TerrainRenderPlugin {
+    fn default() -> Self {
+        Self {
+            tile_size: TILE_SIZE,
+            chunk_radius: CHUNK_RADIUS,
+        }
+    }
 }
 
 impl TerrainRenderPlugin {

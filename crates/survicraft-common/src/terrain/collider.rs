@@ -20,7 +20,7 @@ impl Plugin for TerrainColliderPlugin {
 
         app.add_systems(
             Update,
-            (generate_chunk_collider).in_set(TerrainRenderPluginSet),
+            (generate_chunk_collider).in_set(TerrainColliderPluginSet),
         );
     }
 }

@@ -251,6 +251,7 @@ fn generate_chunk_mesh(
     }
 }
 
+#[cfg(feature = "debug")]
 mod debug {
     use super::*;
     use bevy::{

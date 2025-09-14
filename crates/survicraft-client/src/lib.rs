@@ -1,13 +1,12 @@
 mod chat;
 mod network;
-mod terrain;
 // For debugging purposes
 mod controller;
 
 use bevy::prelude::*;
 use lightyear::connection::identity::is_client;
 pub use network::{ClientConnection, ClientMetadata};
-use survicraft_common::tilemap::prelude::*;
+use survicraft_common::{terrain::prelude::*, tilemap::prelude::*};
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
 enum ClientStates {
@@ -32,14 +31,8 @@ impl Plugin for ClientPlugin {
         app.add_plugins(chat::ChatPlugin);
         app.configure_sets(Update, chat::ChatPluginSet.in_set(ClientPluginSet));
 
-        app.add_plugins(terrain::TerrainPlugin::new(
-            0,
-            Vec2::splat(1.0),
-            16,
-            2,
-            20.0,
-        ));
-        app.configure_sets(Update, terrain::TerrainPluginSet.in_set(ClientPluginSet));
+        app.add_plugins(TerrainRenderPlugin::default());
+        app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
 
         // For debugging purposes
         app.add_plugins(controller::WASDCameraControllerPlugin);

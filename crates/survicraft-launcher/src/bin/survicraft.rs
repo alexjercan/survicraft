@@ -86,6 +86,13 @@ fn main() {
             .run_if(in_state(GameStates::MainMenu)),
     );
 
+    // Maybe will have a `common` plugin later
+    app.add_plugins(TerrainPlugin::default().with_seed(0));
+    app.configure_sets(
+        Update,
+        TerrainPluginSet.run_if(in_state(GameStates::Playing)),
+    );
+
     app.add_plugins(survicraft_server::ServerPlugin);
     app.configure_sets(
         Update,
