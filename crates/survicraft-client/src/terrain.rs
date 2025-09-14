@@ -45,5 +45,9 @@ impl Plugin for TerrainPlugin {
         app.configure_sets(Update, TerrainGeometryPluginSet.in_set(TerrainPluginSet));
         app.add_plugins(TerrainRenderPlugin::new(self.tile_size, self.chunk_radius));
         app.configure_sets(Update, TerrainRenderPluginSet.in_set(TerrainPluginSet));
+
+        // testing
+        app.add_plugins(TerrainColliderPlugin);
+        app.configure_sets(Update, TerrainColliderPluginSet.in_set(TerrainPluginSet));
     }
 }

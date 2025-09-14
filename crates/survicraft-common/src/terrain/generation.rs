@@ -50,7 +50,7 @@ fn handle_chunk(
     if q_tiles.is_empty() {
         return;
     }
-    debug!("Handling tile for {} tiles", q_tiles.iter().len());
+    debug!("Computing Tile kind for {} tiles", q_tiles.iter().len());
 
     for (entity, height) in q_tiles {
         let height = **height;

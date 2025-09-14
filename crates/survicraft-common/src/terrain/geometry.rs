@@ -8,8 +8,8 @@ use itertools::Itertools;
 
 use crate::{terrain::prelude::*, tilemap::prelude::*};
 
-// #[cfg(feature = "debug")]
-// use self::debug::*;
+#[cfg(feature = "debug")]
+use self::debug::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TerrainGeometryPluginSet;
@@ -30,18 +30,16 @@ impl TerrainGeometryPlugin {
 
 impl Plugin for TerrainGeometryPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<GeometrySettings>();
+        app.register_type::<ChunkMesh>()
+            .register_type::<GeometrySettings>();
 
-        // #[cfg(feature = "debug")]
-        // app.add_plugins(DebugPlugin);
-        // #[cfg(feature = "debug")]
-        // app.configure_sets(Update, DebugPluginSet.in_set(TerrainRenderPluginSet));
+        #[cfg(feature = "debug")]
+        app.add_plugins(DebugPlugin);
+        #[cfg(feature = "debug")]
+        app.configure_sets(Update, DebugPluginSet.in_set(TerrainGeometryPluginSet));
 
-        app.insert_resource(GeometrySettings::new(
-            self.tile_size,
-            self.max_height,
-        ))
-        .add_systems(Update, generate_chunk_mesh.in_set(TerrainGeometryPluginSet));
+        app.insert_resource(GeometrySettings::new(self.tile_size, self.max_height))
+            .add_systems(Update, generate_chunk_mesh.in_set(TerrainGeometryPluginSet));
     }
 }
 
@@ -219,14 +217,13 @@ impl GeometrySettings {
 
 fn generate_chunk_mesh(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     layout: Res<GeometrySettings>,
     q_tiles: Query<(Entity, &LocalTileCoord, &TileNoiseHeight, &ChildOf), Without<ChunkMeshReady>>,
 ) {
     if q_tiles.is_empty() {
         return;
     }
-    debug!("Handling chunk mesh for {} tiles", q_tiles.iter().len());
+    debug!("Generating geometry for {} tiles", q_tiles.iter().len());
 
     for (chunk_entity, chunk) in q_tiles
         .iter()
@@ -249,12 +246,69 @@ fn generate_chunk_mesh(
         let mesh = layout.mesh(storage);
 
         commands.entity(chunk_entity).with_children(|parent| {
-            parent.spawn((
-                Name::new("Chunk Mesh"),
-                ChunkMesh,
-                Visibility::Visible,
-                Mesh3d(meshes.add(mesh.clone())),
-            ));
+            parent.spawn((Name::new("Chunk Mesh"), ChunkMesh(mesh.clone())));
         });
+    }
+}
+
+mod debug {
+    use super::*;
+    use bevy::{
+        pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
+        prelude::*,
+    };
+
+    #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
+    struct ShowGrid(pub bool);
+
+    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+    pub struct DebugPluginSet;
+
+    pub struct DebugPlugin;
+
+    impl Plugin for DebugPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_plugins(WireframePlugin::default())
+                .insert_resource(WireframeConfig {
+                    global: false,
+                    default_color: Color::WHITE,
+                });
+            app.insert_resource(ShowGrid(true));
+            app.add_systems(Update, (toggle, draw_grid, undraw_grid).in_set(DebugPluginSet));
+        }
+    }
+
+    fn toggle(kbd: Res<ButtonInput<KeyCode>>, mut show_grid: ResMut<ShowGrid>) {
+        if kbd.just_pressed(KeyCode::F11) {
+            show_grid.0 = !show_grid.0;
+        }
+    }
+
+    fn draw_grid(
+        mut commands: Commands,
+        show_grid: Res<ShowGrid>,
+        q_meshes: Query<Entity, (With<ChunkMesh>, Without<Wireframe>)>,
+    ) {
+        if !**show_grid {
+            return;
+        }
+
+        for entity in q_meshes.iter() {
+            commands.entity(entity).insert(Wireframe);
+        }
+    }
+
+    fn undraw_grid(
+        mut commands: Commands,
+        show_grid: Res<ShowGrid>,
+        q_meshes: Query<Entity, (With<ChunkMesh>, With<Wireframe>)>,
+    ) {
+        if **show_grid {
+            return;
+        }
+
+        for entity in q_meshes.iter() {
+            commands.entity(entity).remove::<Wireframe>();
+        }
     }
 }

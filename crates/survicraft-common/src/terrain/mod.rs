@@ -4,6 +4,7 @@ mod generation;
 mod resources;
 mod render;
 mod geometry;
+mod collider;
 
 pub mod prelude {
     pub use super::resources::*;
@@ -11,4 +12,5 @@ pub mod prelude {
     pub use super::generation::*;
     pub use super::render::*;
     pub use super::geometry::*;
+    pub use super::collider::*;
 }

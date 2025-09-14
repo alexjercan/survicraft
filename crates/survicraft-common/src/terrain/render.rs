@@ -74,19 +74,20 @@ fn generate_chunk_render(
     mut commands: Commands,
     mut chunk_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, ChunkMaterial>>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     layout: Res<RenderSettings>,
     q_tiles: Query<(&LocalTileCoord, &Tile), Without<TileBorder>>,
-    q_meshes: Query<(Entity, &ChildOf), (With<ChunkMesh>, Without<ChunkRenderReady>)>,
+    q_meshes: Query<(Entity, &ChunkMesh, &ChildOf), Without<ChunkRenderReady>>,
     q_chunks: Query<&Children, With<ChunkCoord>>,
     assets: Res<TerrainAssets>,
 ) {
-    if q_tiles.is_empty() {
+    if q_meshes.is_empty() {
         return;
     }
-    debug!("Handling chunk mesh for {} tiles", q_tiles.iter().len());
+    debug!("Generating render data for {} chunk meshes", q_meshes.iter().len());
 
     let size = layout.chunk_radius * 2 + 1;
-    for (mesh, ChildOf(chunk)) in q_meshes.iter() {
+    for (entity, ChunkMesh(mesh), ChildOf(chunk)) in q_meshes.iter() {
         if let Ok(children) = q_chunks.get(*chunk) {
             let mut height_data = vec![-1; (size * size) as usize];
 
@@ -99,8 +100,10 @@ fn generate_chunk_render(
                 }
             }
 
-            commands.entity(mesh).insert((
+            commands.entity(entity).insert((
                 ChunkRenderReady,
+                Visibility::Visible,
+                Mesh3d(meshes.add(mesh.clone())),
                 MeshMaterial3d(chunk_materials.add(ExtendedMaterial {
                     base: StandardMaterial {
                         perceptual_roughness: 1.0,
