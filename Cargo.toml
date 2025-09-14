@@ -1,15 +1,15 @@
-[workspace]
-members = [
-  "crates/survicraft-assets",
-  "crates/survicraft-client",
-  "crates/survicraft-server",
-  "crates/survicraft-common",
-  "crates/survicraft-protocol",
-  "crates/survicraft-launcher",
-]
-resolver = "2"
+[package]
+name = "survicraft"
+version = "0.1.0"
+authors = ["jercan_alex27@yahoo.com"]
+edition = "2021"
+license = "MIT"
+homepage = "https://github.com/alexjercan/survicraft"
+description = "Simple Survival Multiplayer Game"
+categories = ["games"]
+exclude = ["dist", "build", "assets", "credits"]
 
-[workspace.dependencies]
+[dependencies]
 bevy = {version = "0.16.1", features = [
   "serialize",
   "bevy_asset",
@@ -29,25 +29,21 @@ bevy = {version = "0.16.1", features = [
   "x11",
   "bevy_gizmos",
 ], default-features = false}
-
 bevy-inspector-egui = "0.33.1"
 bevy_egui = { version = "0.36", default-features = false, features = [
   "open_url",
   "default_fonts",
   "render",
 ] }
-
 bincode = "2.0.1"
 serde = "1.0.219"
 crossbeam-channel = "0.5.15"
-
 lightyear = { version = "0.23.0", features = [
   "netcode",
   "leafwing",
   "avian3d",
   "udp"
 ]}
-
 avian3d = {version = "0.3.1", features = [
   "3d",
   "f32",
@@ -58,25 +54,18 @@ avian3d = {version = "0.3.1", features = [
   "collider-from-mesh",
   "debug-plugin"
 ], default-features = false}
-
 leafwing-input-manager = {version = "0.17.1", default-features = false, features = [
   "keyboard",
   "gamepad",
   "mouse",
 ]}
-
 bevy_asset_loader = { version = "0.23.0", features = ["2d"] }
 iyes_perf_ui = "0.5.0"
-
 clap = { version = "4.5.47", features = ["derive"] }
-
 rand = "0.9.2"
-
 bevy_simple_text_input = { version = "0.11.0" }
-
 itertools = "0.14.0"
 noise = "0.9.0"
-
 bevy_common_assets = { version = "0.13.0", features = ["ron"] }
 anyhow = "1.0.99"
 
@@ -111,3 +100,6 @@ strip = true
 
 [workspace.lints.clippy]
 type_complexity = "allow"
+
+[build-dependencies]
+embed-resource = "1"

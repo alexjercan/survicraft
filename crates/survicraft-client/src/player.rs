@@ -14,7 +14,15 @@ pub(crate) struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (handle_spawn_player, handle_character_actions).in_set(PlayerPluginSet));
+        app.add_systems(Update, (testing_predicted, handle_spawn_player, handle_character_actions).in_set(PlayerPluginSet));
+    }
+}
+
+fn testing_predicted(
+    q_predicted: Query<Entity, With<Predicted>>,
+) {
+    for entity in q_predicted.iter() {
+        info!("Predicted entity: {entity:?}");
     }
 }
 
