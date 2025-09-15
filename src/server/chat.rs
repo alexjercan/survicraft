@@ -9,12 +9,12 @@ pub(crate) struct ChatPlugin;
 
 impl Plugin for ChatPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, on_chat_message.in_set(ChatPluginSet));
+        app.add_systems(FixedUpdate, on_chat_message.in_set(ChatPluginSet));
     }
 }
 
 fn on_chat_message(
-    mut q_receiver: Query<(&RemoteId, &mut MessageReceiver<ClientChatMessage>), Without<Client>>,
+    mut q_receiver: Query<(&RemoteId, &mut MessageReceiver<ClientChatMessage>)>,
     mut sender: ServerMultiMessageSender,
     server: Single<&Server>,
 ) {

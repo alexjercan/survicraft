@@ -16,6 +16,10 @@ path = "src/lib.rs"
 name = "survicraft"
 path = "src/bin/survicraft.rs"
 
+[[bin]]
+name = "survicraftd"
+path = "src/bin/survicraftd.rs"
+
 [dependencies]
 bevy = {version = "0.16.1", features = [
   "serialize",

@@ -105,6 +105,7 @@ impl Plugin for LauncherPlugin {
         );
 
         // The client plugin will run only in the Playing state
+        app.add_systems(OnEnter(LauncherStates::Playing), setup_client_playing);
         app.add_plugins(ClientPlugin);
         app.configure_sets(
             FixedUpdate,
@@ -115,6 +116,22 @@ impl Plugin for LauncherPlugin {
             ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
     }
+}
+
+fn setup_client_playing(mut commands: Commands) {
+    commands.spawn((
+        ClientUI,
+        Name::new("ClientUI"),
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        StateScoped(LauncherStates::Playing),
+    ));
 }
 
 fn setup_menu(mut commands: Commands, assets: Res<MainMenuAssets>) {
@@ -229,17 +246,17 @@ fn handle_play_button_pressed(
 
         next_state.set(LauncherStates::Playing);
 
-        commands.spawn((
-            Name::new("ServerListener"),
-            ServerListener,
-            StateScoped(LauncherStates::Playing),
-        ));
+        let server = commands
+            .spawn((
+                Name::new("ServerListener"),
+                ServerListener,
+                StateScoped(LauncherStates::Playing),
+            ))
+            .id();
 
         commands.spawn((
             Name::new("ClientConnection"),
-            ClientConnection {
-                address: SERVER_ADDR,
-            },
+            HostConnection { server },
             ClientMetadata {
                 username: (**player_name).clone(),
             },

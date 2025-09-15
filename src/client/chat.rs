@@ -75,6 +75,8 @@ fn chat_ui_setup(
     mut commands: Commands,
     root: Single<Entity, (With<ChatMenuRoot>, Added<ChatMenuRoot>)>,
 ) {
+    println!("Setting up chat UI");
+
     commands.entity(root.entity()).with_children(|parent| {
         parent.spawn((
             Name::new("ChatInputManager"),

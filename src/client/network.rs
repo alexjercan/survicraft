@@ -4,6 +4,7 @@
 use crate::protocol::prelude::*;
 use bevy::prelude::*;
 use lightyear::{
+    connection::host::HostClient,
     netcode::{Key, NetcodeClient},
     prelude::{client::NetcodeConfig, *},
 };
@@ -14,6 +15,13 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 #[derive(Debug, Clone, Component)]
 pub struct ClientConnection {
     pub address: SocketAddr,
+}
+
+/// Structure representing a request to connect to the host server.
+/// To connect to the host server, add this component to an entity.
+#[derive(Debug, Clone, Component)]
+pub struct HostConnection {
+    pub server: Entity,
 }
 
 /// Component to store client metadata such as username.
@@ -30,18 +38,19 @@ pub(crate) struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (on_client_connection_added, on_welcome_message).in_set(NetworkPluginSet),
-        );
+        app.add_observer(on_client_connection_added);
+        app.add_observer(on_host_connection_added);
+        app.add_systems(Update, on_welcome_message.in_set(NetworkPluginSet));
     }
 }
 
 fn on_client_connection_added(
+    trigger: Trigger<OnAdd, ClientConnection>,
+    q_connection: Query<&ClientConnection>,
     mut commands: Commands,
-    connection: Single<(Entity, &ClientConnection), Added<ClientConnection>>,
 ) -> Result {
-    let (entity, connection) = connection.into_inner();
+    let entity = trigger.target();
+    let connection = q_connection.get(entity)?;
     info!(
         "Starting client, connecting to server at {}",
         connection.address
@@ -75,8 +84,38 @@ fn on_client_connection_added(
     Ok(())
 }
 
+fn on_host_connection_added(
+    trigger: Trigger<OnAdd, HostConnection>,
+    q_connection: Query<&HostConnection>,
+    mut commands: Commands,
+) -> Result {
+    let entity = trigger.target();
+    let connection = q_connection.get(entity)?;
+    info!("Starting client, connecting to host server");
+
+    let client = commands
+        .entity(entity)
+        .insert((
+            Name::new("HostClient"),
+            Client::default(),
+            LinkOf {
+                server: connection.server,
+            },
+            LocalAddr(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)),
+            UdpIo::default(),
+        ))
+        .id();
+
+    commands.trigger_targets(Connect, client);
+
+    Ok(())
+}
+
 fn on_welcome_message(
-    mut receiver: Single<&mut MessageReceiver<ServerWelcomeMessage>>,
+    mut receiver: Single<
+        &mut MessageReceiver<ServerWelcomeMessage>,
+        Or<(With<Client>, With<HostClient>)>,
+    >,
     mut sender: Single<&mut MessageSender<ClientMetaMessage>>,
     metadata: Single<&ClientMetadata>,
 ) {

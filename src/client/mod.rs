@@ -5,22 +5,17 @@ mod player;
 // For debugging purposes
 mod controller;
 
-use crate::helpers::prelude::*;
+use crate::{helpers::prelude::*, prelude::ClientConnection};
 use bevy::prelude::*;
-use lightyear::connection::identity::is_client;
 
 pub mod prelude {
-    pub use super::network::{ClientConnection, ClientMetadata};
-    pub use super::{ClientPlugin, ClientPluginSet};
+    pub use super::network::{ClientConnection, ClientMetadata, HostConnection};
+    pub use super::{ClientPlugin, ClientPluginSet, ClientUI};
 }
 
-// For testing
-#[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
-enum ClientStates {
-    #[default]
-    Connecting,
-    Playing,
-}
+/// Marker component that will spawn the client UI related entities
+#[derive(Component, Clone, Debug)]
+pub struct ClientUI;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ClientPluginSet;
@@ -29,64 +24,47 @@ pub struct ClientPlugin;
 
 impl Plugin for ClientPlugin {
     fn build(&self, app: &mut App) {
-        app.init_state::<ClientStates>();
-        app.enable_state_scoped_entities::<ClientStates>();
-
         app.add_plugins(network::NetworkPlugin);
         app.configure_sets(Update, network::NetworkPluginSet.in_set(ClientPluginSet));
 
         app.add_plugins(chat::ChatPlugin);
         app.configure_sets(Update, chat::ChatPluginSet.in_set(ClientPluginSet));
 
-        app.add_plugins(TerrainRenderPlugin::default());
-        app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
+        // // Terrain Render Plugin
+        // app.add_plugins(TerrainRenderPlugin::default());
+        // app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
 
-        app.add_plugins(player::PlayerPlugin);
-        app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ClientPluginSet));
-        app.configure_sets(Update, player::PlayerPluginSet.in_set(ClientPluginSet));
+        // app.add_plugins(player::PlayerPlugin);
+        // app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ClientPluginSet));
+        // app.configure_sets(Update, player::PlayerPluginSet.in_set(ClientPluginSet));
 
-        // For debugging purposes
-        app.add_plugins(controller::WASDCameraControllerPlugin);
-        app.configure_sets(
-            Update,
-            controller::WASDCameraControllerPluginSet.in_set(ClientPluginSet),
-        );
+        // // For debugging purposes
+        // app.add_plugins(controller::WASDCameraControllerPlugin);
+        // app.configure_sets(
+        //     Update,
+        //     controller::WASDCameraControllerPluginSet.in_set(ClientPluginSet),
+        // );
 
-        app.add_systems(
-            Update,
-            (|mut state: ResMut<NextState<ClientStates>>| {
-                state.set(ClientStates::Playing);
-            })
-            .in_set(ClientPluginSet)
-            .run_if(in_state(ClientStates::Connecting).and(is_client)),
-        );
-        app.add_systems(
-            OnEnter(ClientStates::Playing),
-            setup_chat.in_set(ClientPluginSet),
-        );
-        app.add_systems(
-            OnEnter(ClientStates::Playing),
-            create_a_single_test_chunk.in_set(ClientPluginSet),
-        );
+        app.add_observer(on_client_connection_added);
     }
 }
 
-fn setup_chat(mut commands: Commands) {
-    // Temporary camera for easy testing
-    commands.spawn((
-        controller::WASDCameraControllerBundle::default(),
-        Camera3d::default(),
-        Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
-        Name::new("RTS Camera"),
-    ));
+fn on_client_connection_added(trigger: Trigger<OnAdd, ClientUI>, mut commands: Commands) -> Result {
+    // // Temporary camera for easy testing
+    // commands.spawn((
+    //     controller::WASDCameraControllerBundle::default(),
+    //     Camera3d::default(),
+    //     Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+    //     Name::new("RTS Camera"),
+    // ));
 
-    commands.spawn((
-        DirectionalLight::default(),
-        Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
-        Name::new("Directional Light"),
-    ));
+    // commands.spawn((
+    //     DirectionalLight::default(),
+    //     Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
+    //     Name::new("Directional Light"),
+    // ));
 
-    commands.spawn((
+    commands.entity(trigger.target()).with_child((
         Name::new("ChatUI"),
         chat::ChatMenuRoot,
         Node {
@@ -97,8 +75,9 @@ fn setup_chat(mut commands: Commands) {
             flex_direction: FlexDirection::Column,
             ..default()
         },
-        StateScoped(ClientStates::Playing),
     ));
+
+    Ok(())
 }
 
 fn create_a_single_test_chunk(mut ev_discover: EventWriter<TileDiscoverEvent>) {

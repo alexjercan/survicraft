@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use lightyear::{
     netcode::NetcodeServer,
     prelude::{
-        server::{NetcodeConfig, ServerUdpIo, Start},
+        server::{ClientOf, NetcodeConfig, ServerUdpIo, Start},
         *,
     },
 };
@@ -23,15 +23,16 @@ pub(crate) struct NetworkPlugin;
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(on_server_listener_added);
-        app.add_systems(
-            Update,
-            (on_new_client_connection, handle_new_client).in_set(NetworkPluginSet),
-        );
+        app.add_observer(on_new_client);
+        app.add_observer(on_new_connection);
+
+        app.add_systems(FixedUpdate, on_client_metadata_message.in_set(NetworkPluginSet));
     }
 }
 
 fn on_server_listener_added(trigger: Trigger<OnAdd, ServerListener>, mut commands: Commands) {
     info!("Starting server on {}", SERVER_ADDR);
+
     let server = commands
         .entity(trigger.target())
         .insert((
@@ -45,36 +46,56 @@ fn on_server_listener_added(trigger: Trigger<OnAdd, ServerListener>, mut command
     commands.trigger_targets(Start, server);
 }
 
-fn on_new_client_connection(
-    mut commands: Commands,
-    q_connected: Query<Entity, (Added<Connected>, Without<Client>)>,
-) {
-    for entity in q_connected.iter() {
-        info!("New client connected: {:?}", entity);
+fn on_new_client(trigger: Trigger<OnAdd, Connected>, mut commands: Commands) {
+    info!("New client connected: {:?}", trigger.target());
 
-        commands.entity(entity).insert(ReplicationSender::new(
+    commands
+        .entity(trigger.target())
+        .insert(Name::new("Client"))
+        .insert(ReplicationSender::new(
             SERVER_REPLICATION_INTERVAL,
             SendUpdatesMode::SinceLastAck,
             false,
         ));
-    }
 }
 
-fn handle_new_client(
-    q_connected: Query<(Entity, &RemoteId), (Added<Connected>, Without<Client>)>,
+fn on_new_connection(
+    trigger: Trigger<OnAdd, Connected>,
+    q_connected: Query<&RemoteId, With<ClientOf>>,
     mut sender: ServerMultiMessageSender,
     server: Single<&Server>,
+) -> Result {
+    info!("New connection established: {:?}", trigger.target());
+
+    let entity = trigger.target();
+    let RemoteId(peer) = q_connected.get(entity)?;
+    info!("Sending welcome message to {:?}", peer);
+
+    sender.send::<_, MessageChannel>(
+        &ServerWelcomeMessage,
+        server.clone(),
+        &NetworkTarget::Single(*peer),
+    )?;
+
+    Ok(())
+}
+
+fn on_client_metadata_message(
+    mut commands: Commands,
+    mut q_receiver: Query<
+        (&RemoteId, &mut MessageReceiver<ClientMetaMessage>),
+    >,
 ) {
-    for (_, RemoteId(peer)) in q_connected.iter() {
-        sender
-            .send::<_, MessageChannel>(
-                &ServerWelcomeMessage,
-                server.clone(),
-                &NetworkTarget::Single(*peer),
-            )
-            .unwrap_or_else(|e| {
-                // TODO: Handle the error properly
-                error!("Failed to send message: {:?}", e);
-            });
+    for (RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
+        for message in receiver.receive() {
+            info!("Client {:?} set their name to {}", peer, message.username);
+
+            commands.spawn((
+                Name::new("PlayerMetadata"),
+                PlayerId(*peer),
+                PlayerName(message.username.clone()),
+                Replicate::to_clients(NetworkTarget::All),
+            ));
+        }
     }
 }

@@ -148,7 +148,6 @@ fn handle_button_interact(
     >,
 ) {
     for (interaction, mut background_color, selected) in &mut interaction_query {
-        debug!("Button interaction: {interaction:?}");
         *background_color = match (*interaction, selected) {
             (Interaction::Pressed, _) | (Interaction::None, Some(_)) => PRESSED_BUTTON.into(),
             (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON.into(),
@@ -163,7 +162,6 @@ fn handle_text_interact(
     mut text_input_query: Query<(Entity, &mut TextInputInactive, &mut BorderColor)>,
 ) {
     for (interaction_entity, interaction) in &query {
-        debug!("Text interaction: {interaction:?}");
         if *interaction == Interaction::Pressed {
             for (entity, mut inactive, mut border_color) in &mut text_input_query {
                 if entity == interaction_entity {
