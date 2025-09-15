@@ -1,6 +1,6 @@
 //! The player plugin handles the server side player logic.
 
-use crate::helpers::prelude::*;
+use crate::common::prelude::*;
 use crate::protocol::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -14,10 +14,8 @@ pub(crate) struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (handle_spawn_player, handle_player_actions).in_set(PlayerPluginSet),
-        );
+        app.add_systems(FixedUpdate, handle_player_actions.in_set(PlayerPluginSet));
+        app.add_systems(Update, handle_spawn_player.in_set(PlayerPluginSet));
     }
 }
 
@@ -30,7 +28,7 @@ fn handle_spawn_player(
 ) {
     for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
         for message in receiver.receive() {
-            info!("Client {:?} set their name to {}", peer, message.username);
+            debug!("Client {:?} set their name to {}", peer, message.username);
 
             commands.spawn((
                 PlayerId(*peer),

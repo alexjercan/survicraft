@@ -24,6 +24,7 @@ impl Plugin for ServerPlugin {
         app.configure_sets(Update, network::NetworkPluginSet.in_set(ServerPluginSet));
 
         app.add_plugins(player::PlayerPlugin);
+        app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ServerPluginSet));
         app.configure_sets(Update, player::PlayerPluginSet.in_set(ServerPluginSet));
 
         app.add_systems(

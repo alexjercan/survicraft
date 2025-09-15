@@ -42,6 +42,7 @@ impl Plugin for ClientPlugin {
         app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
 
         app.add_plugins(player::PlayerPlugin);
+        app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ClientPluginSet));
         app.configure_sets(Update, player::PlayerPluginSet.in_set(ClientPluginSet));
 
         // For debugging purposes

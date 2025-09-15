@@ -1,13 +1,15 @@
-// NOTE: This is more of a `common` module
-// TODO: Move it to the `common` crate?
+//! TODO: Add documentation
 
+use crate::protocol::prelude::*;
 use avian3d::prelude::*;
 use bevy::{ecs::query::QueryData, prelude::*};
 use leafwing_input_manager::prelude::*;
-use crate::protocol::prelude::*;
 
 pub mod prelude {
-    pub use super::*;
+    pub use super::{
+        apply_character_action, CharacterPhysicsBundle, CharacterQuery, CHARACTER_CAPSULE_HEIGHT,
+        CHARACTER_CAPSULE_RADIUS,
+    };
 }
 
 pub const CHARACTER_CAPSULE_RADIUS: f32 = 0.5;

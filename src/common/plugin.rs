@@ -92,6 +92,12 @@ impl Plugin for LauncherPlugin {
         // and in the Playing state
         app.add_plugins(ServerPlugin);
         app.configure_sets(
+            FixedUpdate,
+            ServerPluginSet
+                .run_if(is_server.and(in_state(LauncherStates::Playing)))
+                .before(ClientPluginSet),
+        );
+        app.configure_sets(
             Update,
             ServerPluginSet
                 .run_if(is_server.and(in_state(LauncherStates::Playing)))
@@ -100,6 +106,10 @@ impl Plugin for LauncherPlugin {
 
         // The client plugin will run only in the Playing state
         app.add_plugins(ClientPlugin);
+        app.configure_sets(
+            FixedUpdate,
+            ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
         app.configure_sets(
             Update,
             ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
