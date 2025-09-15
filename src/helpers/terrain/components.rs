@@ -1,3 +1,5 @@
+//! TODO: Document components module
+
 use bevy::prelude::*;
 use super::resources::*;
 

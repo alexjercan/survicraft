@@ -1,3 +1,5 @@
+//! TODO: Documentation
+
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use super::components::*;
@@ -21,7 +23,7 @@ struct ChunkColliderReady;
 
 fn generate_chunk_collider(
     mut commands: Commands,
-    q_meshes: Query<(Entity, &ChunkMesh), (With<ChunkMesh>, Without<ChunkColliderReady>)>,
+    q_meshes: Query<(Entity, &ChunkMesh), Without<ChunkColliderReady>>,
 ) {
     if q_meshes.is_empty() {
         return;

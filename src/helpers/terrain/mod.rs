@@ -1,3 +1,8 @@
+//! TODO: Add documentation
+//! NOTE: If I want to make this more generic, the `Planet` resource should maybe be more of a
+//! component. Instead of having it here, it should be somehow stored in the `common` crate, but
+//! not sure yet how to achieve that level of genericity.
+
 mod collider;
 mod components;
 mod generation;

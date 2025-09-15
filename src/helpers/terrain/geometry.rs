@@ -1,3 +1,5 @@
+//! TODO: Add module documentation
+
 use super::components::*;
 use crate::helpers::tilemap::prelude::*;
 use bevy::{

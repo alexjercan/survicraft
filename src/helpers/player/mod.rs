@@ -1,3 +1,6 @@
+// NOTE: This is more of a `common` module
+// TODO: Move it to the `common` crate?
+
 use avian3d::prelude::*;
 use bevy::{ecs::query::QueryData, prelude::*};
 use leafwing_input_manager::prelude::*;

@@ -1,3 +1,5 @@
+//! TODO: Add description
+
 use bevy::prelude::*;
 
 #[derive(Resource, Clone, Default, Debug)]

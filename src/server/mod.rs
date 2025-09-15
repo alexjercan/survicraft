@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use crate::helpers::prelude::*;
 
 pub mod prelude {
-    pub use super::*;
+    pub use super::{ServerPlugin, ServerPluginSet};
     pub use super::network::ServerListener;
 }
 

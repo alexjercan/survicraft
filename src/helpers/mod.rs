@@ -1,3 +1,5 @@
+//! TODO: Add module-level documentation
+
 mod setup;
 mod tilemap;
 mod camera;
@@ -13,5 +15,7 @@ pub mod prelude {
     pub use super::camera::prelude::*;
     pub use super::terrain::prelude::*;
     pub use super::chunk_map::prelude::*;
+
+    // TODO: This should be moved to the common module
     pub use super::player::prelude::*;
 }

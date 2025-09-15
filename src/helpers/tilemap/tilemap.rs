@@ -62,7 +62,6 @@ pub struct TileMapStorage {
     chunk_radius: u32,
     discover_radius: u32,
     chunks: HashMap<IVec2, Entity>,
-    tiles: HashMap<IVec2, Entity>,
 }
 
 impl TileMapStorage {
@@ -181,10 +180,9 @@ impl Plugin for TileMapPlugin {
             chunk_radius: self.chunk_radius,
             discover_radius: self.discover_radius,
             chunks: HashMap::default(),
-            tiles: HashMap::default(),
         });
 
-        app.add_systems(Update, (generate_chunks).in_set(TileMapSet).chain());
+        app.add_systems(Update, generate_chunks.in_set(TileMapSet).chain());
     }
 }
 
@@ -196,11 +194,13 @@ fn generate_chunks(
     for ev in ev_discover.read() {
         let tile = storage.world_pos_to_tile(ev.pos);
         let center = storage.tile_to_center(&tile);
+        debug!("Discovering chunks around tile {:?} at center {:?}", tile, center);
 
         for center in storage.discover_chunks(center) {
             if let Some(_) = storage.get_chunk(center) {
                 continue;
             }
+            debug!("Spawning new chunk at center {:?}", center);
 
             let pos = storage.tile_to_world_pos(center).extend(0.0).xzy();
             let chunk_entity = commands
@@ -328,7 +328,6 @@ mod tests {
             chunk_radius: 2,
             discover_radius: 1,
             chunks: HashMap::default(),
-            tiles: HashMap::default(),
         };
 
         assert_eq!(storage.tile_to_center(&IVec2::new(0, 0)), IVec2::new(0, 0));
@@ -346,7 +345,6 @@ mod tests {
             chunk_radius: 2,
             discover_radius: 1,
             chunks: HashMap::default(),
-            tiles: HashMap::default(),
         };
 
         assert_eq!(storage.world_pos_to_tile(Vec2::new(0.0, 0.0)), IVec2::new(0, 0));
@@ -367,7 +365,6 @@ mod tests {
             chunk_radius: 2,
             discover_radius: 1,
             chunks: HashMap::default(),
-            tiles: HashMap::default(),
         };
 
         assert_eq!(storage.tile_to_world_pos(IVec2::new(0, 0)), Vec2::new(0.0, 0.0));
@@ -383,7 +380,6 @@ mod tests {
             chunk_radius: 2,
             discover_radius: 1,
             chunks: HashMap::default(),
-            tiles: HashMap::default(),
         };
 
         let center = IVec2::new(0, 0);
@@ -409,7 +405,6 @@ mod tests {
             chunk_radius: 2,
             discover_radius: 1,
             chunks: HashMap::default(),
-            tiles: HashMap::default(),
         };
 
         let center = IVec2::new(0, 0);
@@ -450,7 +445,6 @@ mod tests {
             chunk_radius: 2,
             discover_radius: 1,
             chunks: HashMap::default(),
-            tiles: HashMap::default(),
         };
 
         let center = IVec2::new(0, 0);

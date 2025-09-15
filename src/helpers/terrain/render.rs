@@ -1,3 +1,5 @@
+//! TODO: Add documentation
+
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,

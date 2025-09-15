@@ -11,7 +11,7 @@ use lightyear::connection::identity::is_client;
 
 pub mod prelude {
     pub use super::network::{ClientConnection, ClientMetadata};
-    pub use super::*;
+    pub use super::{ClientPlugin, ClientPluginSet};
 }
 
 // For testing

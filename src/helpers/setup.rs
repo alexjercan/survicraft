@@ -1,3 +1,5 @@
+//! This module contains functions to create new Bevy apps with different configurations.
+
 use bevy::{
     diagnostic::DiagnosticsPlugin,
     log::{Level, LogPlugin},

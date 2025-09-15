@@ -1,3 +1,5 @@
+//! A Bevy plugin that serves as the main entry point for the game launcher.
+
 use super::{assets::*, main_menu::*};
 use crate::prelude::*;
 use avian3d::prelude::*;
@@ -26,9 +28,14 @@ pub struct LauncherPlugin;
 
 impl Plugin for LauncherPlugin {
     fn build(&self, app: &mut App) {
+        // Initialize the state machine
         app.init_state::<LauncherStates>();
         app.enable_state_scoped_entities::<LauncherStates>();
 
+        // Multiplayer setup for lightyear. Here we set up both client and server plugins,
+        // but we will control which ones are active using states and conditions. In case
+        // the player is hosting, both client and server will be active. In case the player
+        // is joining, only the client will be active.
         app.add_plugins(ClientPlugins {
             tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
         });
@@ -36,16 +43,21 @@ impl Plugin for LauncherPlugin {
             tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
         });
 
+        // Protocol plugin for handling message serialization and deserialization.
         app.add_plugins(ProtocolPlugin);
 
+        // Asset loading. This will transition from Loading to MainMenu state once done.
         app.add_loading_state(
             LoadingState::new(LauncherStates::Loading)
                 .continue_to_state(LauncherStates::MainMenu)
+                // Load assets for the main menu
                 .load_collection::<MainMenuAssets>(),
         );
 
+        // Utility plugins. Text input plugin for handling text fields.
         app.add_plugins(TextInputPlugin);
 
+        // Main Menu setup and event handling for starting the game.
         app.add_systems(OnEnter(LauncherStates::MainMenu), setup_menu);
         app.add_plugins(MainMenuPlugin);
         app.configure_sets(
@@ -58,6 +70,7 @@ impl Plugin for LauncherPlugin {
                 .run_if(in_state(LauncherStates::MainMenu)),
         );
 
+        // Physics setup. We disable interpolation and sleeping to ensure consistent physics
         app.add_plugins(
             PhysicsPlugins::default()
                 .build()
@@ -66,6 +79,8 @@ impl Plugin for LauncherPlugin {
                 .disable::<SleepingPlugin>(),
         );
 
+        // Terrain setup. We set up terrain assets and the terrain plugin itself.
+        // This will run only in the Playing state.
         app.add_systems(OnEnter(LauncherStates::Playing), setup_terrain);
         app.add_plugins(TerrainPlugin::default().with_seed(0));
         app.configure_sets(
@@ -73,6 +88,8 @@ impl Plugin for LauncherPlugin {
             TerrainPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
+        // The server plugin will run only if we are the server (i.e. hosting)
+        // and in the Playing state
         app.add_plugins(ServerPlugin);
         app.configure_sets(
             Update,
@@ -81,6 +98,7 @@ impl Plugin for LauncherPlugin {
                 .before(ClientPluginSet),
         );
 
+        // The client plugin will run only in the Playing state
         app.add_plugins(ClientPlugin);
         app.configure_sets(
             Update,
@@ -92,6 +110,7 @@ impl Plugin for LauncherPlugin {
 fn setup_menu(mut commands: Commands, assets: Res<MainMenuAssets>) {
     debug!("Setting up main menu...");
 
+    // Initialize the main menu resources from the loaded assets
     commands.insert_resource(MainMenuIcons {
         exit_icon: assets.exit_icon.clone(),
         right_icon: assets.right_icon.clone(),
@@ -104,6 +123,8 @@ fn setup_menu(mut commands: Commands, assets: Res<MainMenuAssets>) {
         StateScoped(LauncherStates::MainMenu),
     ));
 
+    // Spawn the main menu UI root node scoped to the MainMenu state.
+    // This will trigger the MainMenuPlugin systems to populate it.
     commands.spawn((
         Name::new("MainMenuUI"),
         MainMenuRoot,
@@ -192,6 +213,10 @@ fn handle_play_button_pressed(
     player_name: Res<PlayerNameSetting>,
 ) {
     for _ in ev_play.read() {
+        // If the play button is pressed, transition to the Playing state
+        // We spawn the ServerListener and ClientConnection entities here
+        // to enable hosting mode.
+
         next_state.set(LauncherStates::Playing);
 
         commands.spawn((
@@ -220,6 +245,9 @@ fn handle_multiplayer_pressed(
     player_name: Res<PlayerNameSetting>,
 ) {
     for event in ev_multiplayer.read() {
+        // If the multiplayer button is pressed, transition to the Playing state
+        // We spawn only the ClientConnection entity here to enable joining mode.
+
         next_state.set(LauncherStates::Playing);
 
         let addr = IpAddr::from_str(&event.address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));

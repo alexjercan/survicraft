@@ -1,3 +1,9 @@
+//! A Bevy plugin that implements a main menu with multiple sub-menus, including settings and
+//! multiplayer options.
+//!
+//! This can trigger events to start a new game or connect to a multiplayer server.
+//! This plugin also manages user settings such as display quality, volume, and player name.
+
 use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
 use std::fmt::Debug;

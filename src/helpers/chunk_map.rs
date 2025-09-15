@@ -15,7 +15,7 @@ use bevy::{
 use itertools::Itertools;
 
 pub mod prelude {
-    pub use super::*;
+    pub use super::{ChunkMapFunction, ChunkMapInput, ChunkMapPlugin, ChunkMapPluginSet};
 }
 
 pub trait ChunkMapInput {
@@ -121,6 +121,8 @@ fn create_task<T, U, F>(
                 (child_entity, input)
             })
             .collect_vec();
+
+        debug!("Creating compute task for chunk {:?} with {} points", chunk_entity, chunk.len());
 
         for (child_entity, _) in chunk.iter() {
             commands
