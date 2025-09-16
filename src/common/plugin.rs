@@ -97,6 +97,8 @@ impl Plugin for LauncherPlugin {
             Update,
             TerrainPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
+        app.add_plugins(TerrainRenderPlugin::default());
+        app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
 
         // --- Client and Server plugins below here ---
 

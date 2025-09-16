@@ -2,7 +2,6 @@ mod chat;
 mod network;
 mod player;
 
-use crate::helpers::prelude::*;
 use bevy::prelude::*;
 
 pub mod prelude {
@@ -22,9 +21,6 @@ impl Plugin for ClientPlugin {
 
         app.add_plugins(chat::ChatPlugin);
         app.configure_sets(Update, chat::ChatPluginSet.in_set(ClientPluginSet));
-
-        app.add_plugins(TerrainRenderPlugin::default());
-        app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
 
         // app.add_plugins(player::PlayerPlugin);
         // app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ClientPluginSet));

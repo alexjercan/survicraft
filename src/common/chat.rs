@@ -60,11 +60,11 @@ struct HistoryListUI {
 #[derive(Debug, Component, Clone, Copy, PartialEq, Eq)]
 struct HistoryItemUI;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ChatPluginSet;
-
 #[derive(Component, Clone, Copy, Debug)]
 struct ChatMessageInput;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ChatPluginSet;
 
 pub struct ChatPlugin;
 
