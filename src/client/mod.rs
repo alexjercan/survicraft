@@ -2,10 +2,7 @@ mod chat;
 mod network;
 mod player;
 
-// For debugging purposes
-mod controller;
-
-use crate::{helpers::prelude::*, prelude::ClientConnection};
+use crate::helpers::prelude::*;
 use bevy::prelude::*;
 
 pub mod prelude {
@@ -32,16 +29,5 @@ impl Plugin for ClientPlugin {
         // app.add_plugins(player::PlayerPlugin);
         // app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ClientPluginSet));
         // app.configure_sets(Update, player::PlayerPluginSet.in_set(ClientPluginSet));
-
-        // // For debugging purposes
-        // app.add_plugins(controller::WASDCameraControllerPlugin);
-        // app.configure_sets(
-        //     Update,
-        //     controller::WASDCameraControllerPluginSet.in_set(ClientPluginSet),
-        // );
     }
-}
-
-fn create_a_single_test_chunk(mut ev_discover: EventWriter<TileDiscoverEvent>) {
-    ev_discover.send(TileDiscoverEvent::new(Vec2::ZERO));
 }

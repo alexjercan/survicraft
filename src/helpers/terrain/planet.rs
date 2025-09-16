@@ -21,21 +21,21 @@ const CONTINENT_LACUNARITY: f64 = 2.208984375;
 
 /// Frequency of the planet's feature patches. This value is measured in
 /// radians. Higher frequency produces smaller, more numerous patches.
-const FEATURE_PATCH_FREQUENCY: f64 = 0.125;
+const _FEATURE_PATCH_FREQUENCY: f64 = 0.125;
 
 /// Lacunarity of the planet's feature patches. Changing this value
 /// produces slightly different patches. For the best results, this value
 /// should be random, but close to 2.0.
-const FEATURE_PATCH_LACUNARITY: f64 = 2.1875;
+const _FEATURE_PATCH_LACUNARITY: f64 = 2.1875;
 
 /// Frequency of the planet's features abundance. This value is measured
 /// in radians. Higher frequency produces smaller, more numerous abundance.
-const FEATURE_ABUNDANCE_FREQUENCY: f64 = 0.4;
+const _FEATURE_ABUNDANCE_FREQUENCY: f64 = 0.4;
 
 /// Lacunarity of the planet's features abundance. Changing this value
 /// produces slightly different abundance. For the best results, this
 /// value should be random, but close to 2.0.
-const FEATURE_ABUNDANCE_LACUNARITY: f64 = 2.21875;
+const _FEATURE_ABUNDANCE_LACUNARITY: f64 = 2.21875;
 
 /// Lacunarity of the planet's mountains. Changing the value produces
 /// slightly different mountains. For the best results, this value should

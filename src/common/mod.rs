@@ -4,6 +4,7 @@ mod plugin;
 mod server_plugin;
 mod player;
 mod chat;
+mod controller;
 
 pub mod prelude {
     pub use super::main_menu::*;
@@ -12,4 +13,5 @@ pub mod prelude {
     pub use super::server_plugin::*;
     pub use super::player::prelude::*;
     pub use super::chat::prelude::*;
+    pub use super::controller::*;
 }

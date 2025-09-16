@@ -81,6 +81,7 @@ impl Plugin for LauncherPlugin {
                 .disable::<SleepingPlugin>(),
         );
 
+        // Chat setup. We set up chat UI and related systems.
         app.add_systems(OnEnter(LauncherStates::Playing), setup_chat);
         app.add_plugins(ChatPlugin);
         app.configure_sets(
@@ -124,6 +125,17 @@ impl Plugin for LauncherPlugin {
         app.configure_sets(
             Update,
             ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
+
+        // NOTE: For debugging purposes
+        app.add_systems(
+            OnEnter(LauncherStates::Playing),
+            (setup_controller, create_a_single_test_chunk),
+        );
+        app.add_plugins(WASDCameraControllerPlugin);
+        app.configure_sets(
+            Update,
+            WASDCameraControllerPluginSet.in_set(ClientPluginSet),
         );
     }
 }
@@ -300,4 +312,23 @@ fn setup_terrain(mut commands: Commands) {
             },
         },
     ]));
+}
+
+fn setup_controller(mut commands: Commands) {
+    commands.spawn((
+        WASDCameraControllerBundle::default(),
+        Camera3d::default(),
+        Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Name::new("RTS Camera"),
+    ));
+
+    commands.spawn((
+        DirectionalLight::default(),
+        Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Name::new("Directional Light"),
+    ));
+}
+
+fn create_a_single_test_chunk(mut ev_discover: EventWriter<TileDiscoverEvent>) {
+    ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO));
 }
