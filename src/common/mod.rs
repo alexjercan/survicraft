@@ -3,6 +3,7 @@ mod assets;
 mod plugin;
 mod server_plugin;
 mod player;
+mod chat;
 
 pub mod prelude {
     pub use super::main_menu::*;
@@ -10,4 +11,5 @@ pub mod prelude {
     pub use super::plugin::*;
     pub use super::server_plugin::*;
     pub use super::player::prelude::*;
+    pub use super::chat::prelude::*;
 }

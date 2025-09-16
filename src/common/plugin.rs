@@ -70,6 +70,8 @@ impl Plugin for LauncherPlugin {
                 .run_if(in_state(LauncherStates::MainMenu)),
         );
 
+        // --- Playing related stuff below here ---
+
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
         app.add_plugins(
             PhysicsPlugins::default()
@@ -77,6 +79,13 @@ impl Plugin for LauncherPlugin {
                 .disable::<PhysicsInterpolationPlugin>()
                 // disable Sleeping plugin as it can mess up physics rollbacks
                 .disable::<SleepingPlugin>(),
+        );
+
+        app.add_systems(OnEnter(LauncherStates::Playing), setup_chat);
+        app.add_plugins(ChatPlugin);
+        app.configure_sets(
+            Update,
+            ChatPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
@@ -87,6 +96,8 @@ impl Plugin for LauncherPlugin {
             Update,
             TerrainPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
+
+        // --- Client and Server plugins below here ---
 
         // The server plugin will run only if we are the server (i.e. hosting)
         // and in the Playing state
@@ -105,7 +116,6 @@ impl Plugin for LauncherPlugin {
         );
 
         // The client plugin will run only in the Playing state
-        app.add_systems(OnEnter(LauncherStates::Playing), setup_client_playing);
         app.add_plugins(ClientPlugin);
         app.configure_sets(
             FixedUpdate,
@@ -116,22 +126,6 @@ impl Plugin for LauncherPlugin {
             ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
     }
-}
-
-fn setup_client_playing(mut commands: Commands) {
-    commands.spawn((
-        ClientUI,
-        Name::new("ClientUI"),
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-        StateScoped(LauncherStates::Playing),
-    ));
 }
 
 fn setup_menu(mut commands: Commands, assets: Res<MainMenuAssets>) {
@@ -164,6 +158,81 @@ fn setup_menu(mut commands: Commands, assets: Res<MainMenuAssets>) {
             ..default()
         },
         StateScoped(LauncherStates::MainMenu),
+    ));
+}
+
+fn handle_play_button_pressed(
+    mut commands: Commands,
+    mut ev_play: EventReader<ClientPlayClickEvent>,
+    mut next_state: ResMut<NextState<LauncherStates>>,
+    player_name: Res<PlayerNameSetting>,
+) {
+    for _ in ev_play.read() {
+        // If the play button is pressed, transition to the Playing state
+        // We spawn the ServerListener and ClientConnection entities here
+        // to enable hosting mode.
+
+        next_state.set(LauncherStates::Playing);
+
+        let server = commands
+            .spawn((
+                Name::new("ServerListener"),
+                ServerListener,
+                StateScoped(LauncherStates::Playing),
+            ))
+            .id();
+
+        commands.spawn((
+            Name::new("ClientConnection"),
+            HostConnection { server },
+            ClientMetadata {
+                username: (**player_name).clone(),
+            },
+            StateScoped(LauncherStates::Playing),
+        ));
+    }
+}
+
+fn handle_multiplayer_pressed(
+    mut commands: Commands,
+    mut ev_multiplayer: EventReader<ClientMultiplayerClickEvent>,
+    mut next_state: ResMut<NextState<LauncherStates>>,
+    player_name: Res<PlayerNameSetting>,
+) {
+    for event in ev_multiplayer.read() {
+        // If the multiplayer button is pressed, transition to the Playing state
+        // We spawn only the ClientConnection entity here to enable joining mode.
+
+        next_state.set(LauncherStates::Playing);
+
+        let addr = IpAddr::from_str(&event.address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
+
+        commands.spawn((
+            Name::new("ClientConnection"),
+            ClientConnection {
+                address: SocketAddr::new(addr, SERVER_PORT),
+            },
+            ClientMetadata {
+                username: (**player_name).clone(),
+            },
+            StateScoped(LauncherStates::Playing),
+        ));
+    }
+}
+
+fn setup_chat(mut commands: Commands) {
+    commands.spawn((
+        Name::new("ChatUI"),
+        ChatMenuRoot,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        StateScoped(LauncherStates::Playing),
     ));
 }
 
@@ -231,63 +300,4 @@ fn setup_terrain(mut commands: Commands) {
             },
         },
     ]));
-}
-
-fn handle_play_button_pressed(
-    mut commands: Commands,
-    mut ev_play: EventReader<ClientPlayClickEvent>,
-    mut next_state: ResMut<NextState<LauncherStates>>,
-    player_name: Res<PlayerNameSetting>,
-) {
-    for _ in ev_play.read() {
-        // If the play button is pressed, transition to the Playing state
-        // We spawn the ServerListener and ClientConnection entities here
-        // to enable hosting mode.
-
-        next_state.set(LauncherStates::Playing);
-
-        let server = commands
-            .spawn((
-                Name::new("ServerListener"),
-                ServerListener,
-                StateScoped(LauncherStates::Playing),
-            ))
-            .id();
-
-        commands.spawn((
-            Name::new("ClientConnection"),
-            HostConnection { server },
-            ClientMetadata {
-                username: (**player_name).clone(),
-            },
-            StateScoped(LauncherStates::Playing),
-        ));
-    }
-}
-
-fn handle_multiplayer_pressed(
-    mut commands: Commands,
-    mut ev_multiplayer: EventReader<ClientMultiplayerClickEvent>,
-    mut next_state: ResMut<NextState<LauncherStates>>,
-    player_name: Res<PlayerNameSetting>,
-) {
-    for event in ev_multiplayer.read() {
-        // If the multiplayer button is pressed, transition to the Playing state
-        // We spawn only the ClientConnection entity here to enable joining mode.
-
-        next_state.set(LauncherStates::Playing);
-
-        let addr = IpAddr::from_str(&event.address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
-
-        commands.spawn((
-            Name::new("ClientConnection"),
-            ClientConnection {
-                address: SocketAddr::new(addr, SERVER_PORT),
-            },
-            ClientMetadata {
-                username: (**player_name).clone(),
-            },
-            StateScoped(LauncherStates::Playing),
-        ));
-    }
 }

@@ -10,12 +10,8 @@ use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::network::{ClientConnection, ClientMetadata, HostConnection};
-    pub use super::{ClientPlugin, ClientPluginSet, ClientUI};
+    pub use super::{ClientPlugin, ClientPluginSet};
 }
-
-/// Marker component that will spawn the client UI related entities
-#[derive(Component, Clone, Debug)]
-pub struct ClientUI;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ClientPluginSet;
@@ -30,9 +26,8 @@ impl Plugin for ClientPlugin {
         app.add_plugins(chat::ChatPlugin);
         app.configure_sets(Update, chat::ChatPluginSet.in_set(ClientPluginSet));
 
-        // // Terrain Render Plugin
-        // app.add_plugins(TerrainRenderPlugin::default());
-        // app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
+        app.add_plugins(TerrainRenderPlugin::default());
+        app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
 
         // app.add_plugins(player::PlayerPlugin);
         // app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ClientPluginSet));
@@ -44,40 +39,7 @@ impl Plugin for ClientPlugin {
         //     Update,
         //     controller::WASDCameraControllerPluginSet.in_set(ClientPluginSet),
         // );
-
-        app.add_observer(on_client_connection_added);
     }
-}
-
-fn on_client_connection_added(trigger: Trigger<OnAdd, ClientUI>, mut commands: Commands) -> Result {
-    // // Temporary camera for easy testing
-    // commands.spawn((
-    //     controller::WASDCameraControllerBundle::default(),
-    //     Camera3d::default(),
-    //     Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
-    //     Name::new("RTS Camera"),
-    // ));
-
-    // commands.spawn((
-    //     DirectionalLight::default(),
-    //     Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
-    //     Name::new("Directional Light"),
-    // ));
-
-    commands.entity(trigger.target()).with_child((
-        Name::new("ChatUI"),
-        chat::ChatMenuRoot,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-    ));
-
-    Ok(())
 }
 
 fn create_a_single_test_chunk(mut ev_discover: EventWriter<TileDiscoverEvent>) {
