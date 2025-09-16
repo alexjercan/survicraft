@@ -34,3 +34,7 @@ fn handle_render_player(
         ));
     }
 }
+
+// TODO: Add a debug plugin for this. It should show:
+// - The player's velocity as an arrow
+// - The player's grounded state

@@ -189,7 +189,7 @@ fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
 
 fn add_player_character(
     trigger: Trigger<OnAdd, PlayerCharacter>,
-    q_player: Query<Entity, (With<PlayerCharacter>, Without<Predicted>)>,
+    q_player: Query<Entity, (With<PlayerCharacter>, Without<Replicated>)>,
     mut commands: Commands,
 ) {
     let entity = trigger.target();

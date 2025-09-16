@@ -1,5 +1,9 @@
 //! TODO: Add documentation
 
+// NOTE: I don't want to depend on protocol here, so ideally I would have some intermediary
+// Component for the input actions, but for now this is fine. But when I will copy paste
+// this into another project, I will want to avoid this dependency.
+
 use crate::protocol::prelude::*;
 use avian3d::prelude::*;
 use bevy::{ecs::query::QueryData, prelude::*};
