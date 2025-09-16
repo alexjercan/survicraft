@@ -31,23 +31,23 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_observer(handle_spawn_player);
+
+        // FixedUpdate is used here to keep the physics and character logic in sync.
         app.add_systems(
             FixedUpdate,
             handle_character_actions.in_set(PlayerPluginSet),
         );
-        app.add_systems(Update, handle_spawn_player.in_set(PlayerPluginSet));
     }
 }
 
 fn handle_spawn_player(
+    trigger: Trigger<OnAdd, PlayerCharacterController>,
     mut commands: Commands,
-    q_player: Query<Entity, Added<PlayerCharacterController>>,
 ) {
-    for entity in &q_player {
-        commands
-            .entity(entity)
-            .insert((CharacterPhysicsBundle::default(),));
-    }
+    commands
+        .entity(trigger.target())
+        .insert((CharacterPhysicsBundle::default(),));
 }
 
 fn handle_character_actions(

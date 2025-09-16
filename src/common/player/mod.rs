@@ -1,3 +1,5 @@
+//! TODO: Document this module
+
 mod plugin;
 mod render;
 
