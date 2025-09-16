@@ -94,6 +94,7 @@ fn on_client_metadata_message(
                 Name::new("PlayerMetadata"),
                 PlayerId(*peer),
                 PlayerName(message.username.clone()),
+                PlayerMetadata,
                 Replicate::to_clients(NetworkTarget::All),
             ));
         }

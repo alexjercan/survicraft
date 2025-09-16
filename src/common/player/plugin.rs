@@ -7,7 +7,7 @@ use leafwing_input_manager::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        apply_character_action, CharacterPhysicsBundle, CharacterQuery, CHARACTER_CAPSULE_HEIGHT,
+        PlayerCharacterController, PlayerPlugin, PlayerPluginSet, CHARACTER_CAPSULE_HEIGHT,
         CHARACTER_CAPSULE_RADIUS,
     };
 }
@@ -15,8 +15,52 @@ pub mod prelude {
 pub const CHARACTER_CAPSULE_RADIUS: f32 = 0.5;
 pub const CHARACTER_CAPSULE_HEIGHT: f32 = 1.0;
 
+/// Marker component for the player character entity. Spawn this when you
+/// want to attach a player bundle and have it be controlled by a player.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PlayerCharacterController;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PlayerPluginSet;
+
+pub struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            FixedUpdate,
+            handle_character_actions.in_set(PlayerPluginSet),
+        );
+        app.add_systems(Update, handle_spawn_player.in_set(PlayerPluginSet));
+    }
+}
+
+fn handle_spawn_player(
+    mut commands: Commands,
+    q_player: Query<Entity, Added<PlayerCharacterController>>,
+) {
+    for entity in &q_player {
+        commands
+            .entity(entity)
+            .insert((CharacterPhysicsBundle::default(),));
+    }
+}
+
+fn handle_character_actions(
+    time: Res<Time>,
+    spatial_query: SpatialQuery,
+    mut query: Query<
+        (&ActionState<CharacterAction>, CharacterQuery),
+        With<PlayerCharacterController>,
+    >,
+) {
+    for (action_state, mut character) in &mut query {
+        apply_character_action(&time, &spatial_query, action_state, &mut character);
+    }
+}
+
 #[derive(Bundle)]
-pub struct CharacterPhysicsBundle {
+struct CharacterPhysicsBundle {
     collider: Collider,
     rigid_body: RigidBody,
     external_force: ExternalForce,
@@ -43,17 +87,17 @@ impl Default for CharacterPhysicsBundle {
 
 #[derive(QueryData)]
 #[query_data(mutable, derive(Debug))]
-pub struct CharacterQuery {
-    pub external_force: &'static mut ExternalForce,
-    pub external_impulse: &'static mut ExternalImpulse,
-    pub linear_velocity: &'static LinearVelocity,
-    pub mass: &'static ComputedMass,
-    pub position: &'static Position,
-    pub entity: Entity,
+struct CharacterQuery {
+    external_force: &'static mut ExternalForce,
+    external_impulse: &'static mut ExternalImpulse,
+    linear_velocity: &'static LinearVelocity,
+    mass: &'static ComputedMass,
+    position: &'static Position,
+    entity: Entity,
 }
 
 /// Apply the character actions `action_state` to the character entity `character`.
-pub fn apply_character_action(
+fn apply_character_action(
     time: &Res<Time>,
     spatial_query: &SpatialQuery,
     action_state: &ActionState<CharacterAction>,

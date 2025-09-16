@@ -40,7 +40,7 @@ impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(on_client_connection_added);
         app.add_observer(on_host_connection_added);
-        app.add_systems(Update, on_welcome_message.in_set(NetworkPluginSet));
+        app.add_systems(FixedUpdate, on_welcome_message.in_set(NetworkPluginSet));
     }
 }
 
@@ -117,13 +117,18 @@ fn on_welcome_message(
         Or<(With<Client>, With<HostClient>)>,
     >,
     mut sender: Single<&mut MessageSender<ClientMetaMessage>>,
+    mut sender_spawn: Single<&mut MessageSender<ClientSpawnRequest>>,
     metadata: Single<&ClientMetadata>,
 ) {
     for message in receiver.receive() {
         info!("Received welcome message from server: {:?}", message);
 
+        debug!("Sending client metadata: {:?}", metadata.username);
         sender.send::<MessageChannel>(ClientMetaMessage {
             username: metadata.username.clone(),
         });
+
+        debug!("Sending spawn request");
+        sender_spawn.send::<MessageChannel>(ClientSpawnRequest);
     }
 }

@@ -3,7 +3,6 @@ mod network;
 mod player;
 
 use bevy::prelude::*;
-use crate::helpers::prelude::*;
 
 pub mod prelude {
     pub use super::{ServerPlugin, ServerPluginSet};
@@ -19,13 +18,11 @@ impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(network::NetworkPlugin);
         app.configure_sets(FixedUpdate, network::NetworkPluginSet.in_set(ServerPluginSet));
-        app.configure_sets(Update, network::NetworkPluginSet.in_set(ServerPluginSet));
 
         app.add_plugins(chat::ChatPlugin);
         app.configure_sets(FixedUpdate, chat::ChatPluginSet.in_set(ServerPluginSet));
 
-        // app.add_plugins(player::PlayerPlugin);
-        // app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ServerPluginSet));
-        // app.configure_sets(Update, player::PlayerPluginSet.in_set(ServerPluginSet));
+        app.add_plugins(player::PlayerPlugin);
+        app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ServerPluginSet));
     }
 }

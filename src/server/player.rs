@@ -1,6 +1,5 @@
 //! The player plugin handles the server side player logic.
 
-use crate::common::prelude::*;
 use crate::protocol::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -14,25 +13,27 @@ pub(crate) struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, handle_player_actions.in_set(PlayerPluginSet));
-        app.add_systems(Update, handle_spawn_player.in_set(PlayerPluginSet));
+        app.add_systems(FixedUpdate, handle_spawn_player.in_set(PlayerPluginSet));
     }
 }
 
 fn handle_spawn_player(
     mut commands: Commands,
-    mut q_receiver: Query<
-        (Entity, &RemoteId, &mut MessageReceiver<ClientMetaMessage>),
-        Without<Client>,
-    >,
+    mut q_receiver: Query<(Entity, &RemoteId, &mut MessageReceiver<ClientSpawnRequest>)>,
+    q_player: Query<(Entity, &PlayerId), With<PlayerCharacter>>,
 ) {
     for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
-        for message in receiver.receive() {
-            debug!("Client {:?} set their name to {}", peer, message.username);
+        for _ in receiver.receive() {
+            if q_player.iter().any(|(_, id)| id.0 == *peer) {
+                warn!(
+                    "Player with ID {:?} already has a character, ignoring spawn request",
+                    peer
+                );
+                continue;
+            }
 
             commands.spawn((
                 PlayerId(*peer),
-                PlayerName(message.username.clone()),
                 Name::new("Player"),
                 ActionState::<CharacterAction>::default(),
                 Position(Vec3::new(0.0, 3.0, 0.0)),
@@ -42,18 +43,8 @@ fn handle_spawn_player(
                     owner: entity,
                     lifetime: Lifetime::default(),
                 },
-                CharacterPhysicsBundle::default(),
+                PlayerCharacter,
             ));
         }
-    }
-}
-
-fn handle_player_actions(
-    time: Res<Time>,
-    spatial_query: SpatialQuery,
-    mut query: Query<(&ActionState<CharacterAction>, CharacterQuery)>,
-) {
-    for (action_state, mut character) in &mut query {
-        apply_character_action(&time, &spatial_query, action_state, &mut character);
     }
 }

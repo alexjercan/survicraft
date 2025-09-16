@@ -47,6 +47,7 @@ impl Plugin for LauncherPlugin {
         app.add_plugins(ProtocolPlugin);
 
         // Asset loading. This will transition from Loading to MainMenu state once done.
+        app.add_systems(OnEnter(LauncherStates::Loading), setup_terrain_assets);
         app.add_loading_state(
             LoadingState::new(LauncherStates::Loading)
                 .continue_to_state(LauncherStates::MainMenu)
@@ -91,14 +92,32 @@ impl Plugin for LauncherPlugin {
 
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
         // This will run only in the Playing state.
-        app.add_systems(OnEnter(LauncherStates::Playing), setup_terrain);
         app.add_plugins(TerrainPlugin::default().with_seed(0));
         app.configure_sets(
             Update,
             TerrainPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
         app.add_plugins(TerrainRenderPlugin::default());
-        app.configure_sets(Update, TerrainRenderPluginSet.in_set(ClientPluginSet));
+        app.configure_sets(
+            Update,
+            TerrainRenderPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
+
+        // Player setup. We set up player-related systems and the player plugin.
+        app.add_plugins(PlayerPlugin);
+        app.configure_sets(
+            FixedUpdate,
+            PlayerPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
+        app.configure_sets(
+            Update,
+            PlayerPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
+        app.add_plugins(PlayerRenderPlugin);
+        app.configure_sets(
+            Update,
+            PlayerRenderPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
 
         // --- Client and Server plugins below here ---
 
@@ -111,21 +130,11 @@ impl Plugin for LauncherPlugin {
                 .run_if(is_server.and(in_state(LauncherStates::Playing)))
                 .before(ClientPluginSet),
         );
-        app.configure_sets(
-            Update,
-            ServerPluginSet
-                .run_if(is_server.and(in_state(LauncherStates::Playing)))
-                .before(ClientPluginSet),
-        );
 
         // The client plugin will run only in the Playing state
         app.add_plugins(ClientPlugin);
         app.configure_sets(
             FixedUpdate,
-            ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
-        app.configure_sets(
-            Update,
             ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
@@ -137,7 +146,7 @@ impl Plugin for LauncherPlugin {
         app.add_plugins(WASDCameraControllerPlugin);
         app.configure_sets(
             Update,
-            WASDCameraControllerPluginSet.in_set(ClientPluginSet),
+            WASDCameraControllerPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
     }
 }
@@ -250,8 +259,8 @@ fn setup_chat(mut commands: Commands) {
     ));
 }
 
-fn setup_terrain(mut commands: Commands) {
-    debug!("Setting up terrain...");
+fn setup_terrain_assets(mut commands: Commands) {
+    debug!("Setting up terrain assets...");
 
     // TODO: I want to load these from file, but for now, hardcode them
     // with some kind of cool syntax like:

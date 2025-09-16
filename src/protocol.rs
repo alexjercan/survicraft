@@ -9,6 +9,8 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+use crate::common::prelude::*;
+
 pub mod prelude {
     pub use super::*;
 }
@@ -39,6 +41,12 @@ pub struct PlayerId(pub PeerId);
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
 pub struct PlayerName(pub String);
 
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+pub struct PlayerMetadata;
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+pub struct PlayerCharacter;
+
 // --- Messages ---
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -48,6 +56,9 @@ pub struct ServerWelcomeMessage;
 pub struct ClientMetaMessage {
     pub username: String,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ClientSpawnRequest;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientChatMessage {
@@ -80,7 +91,9 @@ impl Plugin for ProtocolPlugin {
 
         // Components for player
         app.register_type::<PlayerId>()
-            .register_type::<PlayerName>();
+            .register_type::<PlayerName>()
+            .register_type::<PlayerCharacter>()
+            .register_type::<PlayerMetadata>();
 
         app.register_component::<Name>()
             .add_prediction(PredictionMode::Once)
@@ -91,6 +104,14 @@ impl Plugin for ProtocolPlugin {
             .add_interpolation(InterpolationMode::Once);
 
         app.register_component::<PlayerName>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
+        app.register_component::<PlayerMetadata>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
+        app.register_component::<PlayerCharacter>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
@@ -129,10 +150,12 @@ impl Plugin for ProtocolPlugin {
             .add_interpolation(InterpolationMode::Full)
             .add_linear_interpolation_fn();
 
-        // Messages for Chat
+        // Messages and channels
         app.add_message::<ServerWelcomeMessage>()
             .add_direction(NetworkDirection::ServerToClient);
         app.add_message::<ClientMetaMessage>()
+            .add_direction(NetworkDirection::ClientToServer);
+        app.add_message::<ClientSpawnRequest>()
             .add_direction(NetworkDirection::ClientToServer);
         app.add_message::<ClientChatMessage>()
             .add_direction(NetworkDirection::ClientToServer);
@@ -144,6 +167,8 @@ impl Plugin for ProtocolPlugin {
             ..default()
         })
         .add_direction(NetworkDirection::Bidirectional);
+
+        app.add_observer(add_player_character);
     }
 }
 
@@ -160,4 +185,17 @@ fn position_should_rollback(this: &Position, that: &Position) -> bool {
 
 fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
     this.angle_between(that.0) >= 0.01
+}
+
+fn add_player_character(
+    trigger: Trigger<OnAdd, PlayerCharacter>,
+    q_player: Query<Entity, (With<PlayerCharacter>, Without<Predicted>)>,
+    mut commands: Commands,
+) {
+    let entity = trigger.target();
+    if !q_player.contains(entity) {
+        return;
+    }
+
+    commands.entity(entity).insert(PlayerCharacterController);
 }

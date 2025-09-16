@@ -12,7 +12,7 @@ pub(crate) struct ChatPlugin;
 impl Plugin for ChatPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
-            Update,
+            FixedUpdate,
             (handle_chat_submit, on_chat_message).in_set(ChatPluginSet),
         );
     }
