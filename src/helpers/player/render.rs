@@ -1,6 +1,6 @@
 //! TODO: add description
 
-use crate::common::player::prelude::*;
+use super::prelude::*;
 use bevy::prelude::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

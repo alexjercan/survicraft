@@ -1,3 +1,4 @@
+use crate::helpers::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -8,8 +9,6 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-
-use crate::common::prelude::*;
 
 pub mod prelude {
     pub use super::*;
@@ -170,6 +169,8 @@ impl Plugin for ProtocolPlugin {
 
         app.add_observer(add_player_character);
         app.add_systems(Update, update_player_character);
+
+        app.add_systems(Update, testing_query);
     }
 }
 
@@ -210,5 +211,13 @@ fn update_player_character(
     for (mut input, action_state) in q_player.iter_mut() {
         input.move_axis = action_state.axis_pair(&CharacterAction::Move);
         input.jump = action_state.just_pressed(&CharacterAction::Jump);
+    }
+}
+
+fn testing_query(
+    q_confirmed: Query<(Entity, &Confirmed) /*, Without<LeafwingSequence<CharacterAction>>>, */ >,
+) {
+    for (entity, confirmed) in q_confirmed.iter() {
+        info!("Entity {:?} is confirmed: {:?}", entity, confirmed);
     }
 }
