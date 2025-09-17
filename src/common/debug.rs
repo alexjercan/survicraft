@@ -1,3 +1,5 @@
+// TODO: implement a better debug with a bunch of logging and cool stuff
+
 use crate::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;

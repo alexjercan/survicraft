@@ -105,6 +105,7 @@ fn apply_character_action(
     input: &PlayerCharacterInput,
     character: &mut CharacterQueryItem,
 ) {
+    // TODO: unhardcode these values
     const MAX_SPEED: f32 = 5.0;
     const MAX_ACCELERATION: f32 = 20.0;
     const LOOK_SENSITIVITY: f32 = 0.0025;
