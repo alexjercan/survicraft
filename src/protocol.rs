@@ -1,4 +1,3 @@
-use crate::helpers::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -169,9 +168,6 @@ impl Plugin for ProtocolPlugin {
             ..default()
         })
         .add_direction(NetworkDirection::Bidirectional);
-
-        app.add_observer(add_player_character);
-        app.add_systems(Update, update_player_character);
     }
 }
 
@@ -190,30 +186,3 @@ fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
     this.angle_between(that.0) >= 0.01
 }
 
-// TODO: Might want to move some of these into `common`
-
-fn add_player_character(
-    trigger: Trigger<OnAdd, PlayerCharacter>,
-    q_player: Query<Entity, (With<PlayerCharacter>, Without<Replicated>)>,
-    mut commands: Commands,
-) {
-    let entity = trigger.target();
-    if !q_player.contains(entity) {
-        return;
-    }
-
-    commands.entity(entity).insert(PlayerCharacterController);
-}
-
-fn update_player_character(
-    mut q_player: Query<
-        (&mut PlayerCharacterInput, &ActionState<CharacterAction>),
-        With<PlayerCharacterController>,
-    >,
-) {
-    for (mut input, action_state) in q_player.iter_mut() {
-        input.move_axis = action_state.axis_pair(&CharacterAction::Move);
-        input.jump = action_state.just_pressed(&CharacterAction::Jump);
-        input.look = action_state.axis_pair(&CharacterAction::Look);
-    }
-}

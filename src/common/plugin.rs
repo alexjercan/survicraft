@@ -3,7 +3,7 @@
 use super::{assets::*, main_menu::*};
 use crate::prelude::*;
 use avian3d::prelude::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, window::{CursorGrabMode, PrimaryWindow}};
 use bevy_asset_loader::prelude::*;
 use bevy_simple_text_input::TextInputPlugin;
 use lightyear::{
@@ -72,6 +72,13 @@ impl Plugin for LauncherPlugin {
         );
 
         // --- Playing related stuff below here ---
+
+        // NOTE: Just for testing, lock cursor on left click and unlock on escape
+        app.add_systems(Update, (
+            lock_on_left_click,
+            unlock_on_escape,
+            cursor_recenter,
+        ).run_if(in_state(LauncherStates::Playing)));
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
         app.add_plugins(
@@ -344,4 +351,40 @@ fn setup_controller(mut commands: Commands) {
 
 fn create_a_single_test_chunk(mut ev_discover: EventWriter<TileDiscoverEvent>) {
     ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO));
+}
+
+
+// Mouse lock just for now
+
+fn lock_on_left_click(
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    mouse: Res<ButtonInput<MouseButton>>
+) {
+    if mouse.just_pressed(MouseButton::Left) {
+        if let Ok(mut window) = windows.single_mut() {
+            window.cursor_options.grab_mode = CursorGrabMode::Locked;
+            window.cursor_options.visible = false;
+        }
+    }
+}
+
+fn unlock_on_escape(
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    keys: Res<ButtonInput<KeyCode>>
+) {
+    if keys.just_pressed(KeyCode::Escape) {
+        if let Ok(mut window) = windows.single_mut() {
+            window.cursor_options.grab_mode = CursorGrabMode::None;
+            window.cursor_options.visible = true;
+        }
+    }
+}
+
+fn cursor_recenter(
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    if let Ok(mut window) = windows.single_mut() {
+        let center = Vec2::new(window.width() * 0.5, window.height() * 0.5);
+        window.set_cursor_position(Some(center));
+    }
 }
