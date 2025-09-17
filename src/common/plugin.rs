@@ -120,10 +120,7 @@ impl Plugin for LauncherPlugin {
         );
 
         // The head camera controller will run only in the Playing state
-        app.add_systems(
-            OnEnter(LauncherStates::Playing),
-            setup_controller,
-        );
+        app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
         app.add_plugins(HeadCameraControllerPlugin);
         app.configure_sets(
             Update,
@@ -150,10 +147,7 @@ impl Plugin for LauncherPlugin {
         );
 
         // NOTE: For debugging purposes
-        app.add_systems(
-            OnEnter(LauncherStates::Playing),
-            create_a_single_test_chunk,
-        );
+        app.add_systems(OnEnter(LauncherStates::Playing), create_a_single_test_chunk);
     }
 }
 
@@ -337,12 +331,14 @@ fn setup_controller(mut commands: Commands) {
         Camera3d::default(),
         Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
         Name::new("Head Camera"),
+        StateScoped(LauncherStates::Playing),
     ));
 
     commands.spawn((
         DirectionalLight::default(),
         Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
         Name::new("Directional Light"),
+        StateScoped(LauncherStates::Playing),
     ));
 }
 

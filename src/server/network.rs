@@ -26,7 +26,10 @@ impl Plugin for NetworkPlugin {
         app.add_observer(on_new_client);
         app.add_observer(on_new_connection);
 
-        app.add_systems(FixedUpdate, on_client_metadata_message.in_set(NetworkPluginSet));
+        app.add_systems(
+            FixedUpdate,
+            on_client_metadata_message.in_set(NetworkPluginSet),
+        );
     }
 }
 
@@ -82,9 +85,7 @@ fn on_new_connection(
 
 fn on_client_metadata_message(
     mut commands: Commands,
-    mut q_receiver: Query<
-        (&RemoteId, &mut MessageReceiver<ClientMetaMessage>),
-    >,
+    mut q_receiver: Query<(&RemoteId, &mut MessageReceiver<ClientMetaMessage>)>,
 ) {
     for (RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
         for message in receiver.receive() {

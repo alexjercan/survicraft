@@ -47,9 +47,7 @@ pub struct TileDiscoverEvent {
 impl TileDiscoverEvent {
     /// Creates a new TileDiscoverEvent with the specified position.
     pub fn new(pos: Vec2) -> Self {
-        Self {
-            pos,
-        }
+        Self { pos }
     }
 }
 
@@ -194,7 +192,10 @@ fn generate_chunks(
     for ev in ev_discover.read() {
         let tile = storage.world_pos_to_tile(ev.pos);
         let center = storage.tile_to_center(&tile);
-        debug!("Discovering chunks around tile {:?} at center {:?}", tile, center);
+        debug!(
+            "Discovering chunks around tile {:?} at center {:?}",
+            tile, center
+        );
 
         for center in storage.discover_chunks(center) {
             if let Some(_) = storage.get_chunk(center) {
@@ -334,8 +335,14 @@ mod tests {
         assert_eq!(storage.tile_to_center(&IVec2::new(1, 1)), IVec2::new(0, 0));
         assert_eq!(storage.tile_to_center(&IVec2::new(2, 2)), IVec2::new(0, 0));
         assert_eq!(storage.tile_to_center(&IVec2::new(3, 3)), IVec2::new(5, 5));
-        assert_eq!(storage.tile_to_center(&IVec2::new(-1, -1)), IVec2::new(0, 0));
-        assert_eq!(storage.tile_to_center(&IVec2::new(-3, -3)), IVec2::new(-5, -5));
+        assert_eq!(
+            storage.tile_to_center(&IVec2::new(-1, -1)),
+            IVec2::new(0, 0)
+        );
+        assert_eq!(
+            storage.tile_to_center(&IVec2::new(-3, -3)),
+            IVec2::new(-5, -5)
+        );
     }
 
     #[test]
@@ -347,15 +354,39 @@ mod tests {
             chunks: HashMap::default(),
         };
 
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(0.0, 0.0)), IVec2::new(0, 0));
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(0.4, 0.4)), IVec2::new(0, 0));
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(0.5, 0.5)), IVec2::new(1, 1));
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(1.4, 1.4)), IVec2::new(1, 1));
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(-0.4, -0.4)), IVec2::new(0, 0));
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(-0.6, -0.6)), IVec2::new(-1, -1));
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(-1.4, -1.4)), IVec2::new(-1, -1));
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(0.0, 0.0)),
+            IVec2::new(0, 0)
+        );
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(0.4, 0.4)),
+            IVec2::new(0, 0)
+        );
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(0.5, 0.5)),
+            IVec2::new(1, 1)
+        );
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(1.4, 1.4)),
+            IVec2::new(1, 1)
+        );
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(-0.4, -0.4)),
+            IVec2::new(0, 0)
+        );
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(-0.6, -0.6)),
+            IVec2::new(-1, -1)
+        );
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(-1.4, -1.4)),
+            IVec2::new(-1, -1)
+        );
 
-        assert_eq!(storage.world_pos_to_tile(Vec2::new(-0.5, -0.5)), IVec2::new(0, 0));
+        assert_eq!(
+            storage.world_pos_to_tile(Vec2::new(-0.5, -0.5)),
+            IVec2::new(0, 0)
+        );
     }
 
     #[test]
@@ -367,10 +398,22 @@ mod tests {
             chunks: HashMap::default(),
         };
 
-        assert_eq!(storage.tile_to_world_pos(IVec2::new(0, 0)), Vec2::new(0.0, 0.0));
-        assert_eq!(storage.tile_to_world_pos(IVec2::new(1, 1)), Vec2::new(1.0, 1.0));
-        assert_eq!(storage.tile_to_world_pos(IVec2::new(-1, -1)), Vec2::new(-1.0, -1.0));
-        assert_eq!(storage.tile_to_world_pos(IVec2::new(5, 5)), Vec2::new(5.0, 5.0));
+        assert_eq!(
+            storage.tile_to_world_pos(IVec2::new(0, 0)),
+            Vec2::new(0.0, 0.0)
+        );
+        assert_eq!(
+            storage.tile_to_world_pos(IVec2::new(1, 1)),
+            Vec2::new(1.0, 1.0)
+        );
+        assert_eq!(
+            storage.tile_to_world_pos(IVec2::new(-1, -1)),
+            Vec2::new(-1.0, -1.0)
+        );
+        assert_eq!(
+            storage.tile_to_world_pos(IVec2::new(5, 5)),
+            Vec2::new(5.0, 5.0)
+        );
     }
 
     #[test]

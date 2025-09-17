@@ -1,6 +1,7 @@
-use crate::helpers::prelude::*;
+use crate::{helpers::prelude::*, protocol::prelude::*};
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
+use lightyear::prelude::*;
 
 #[derive(Actionlike, Clone, Debug, Copy, PartialEq, Eq, Hash, Reflect)]
 enum CameraMovement {
@@ -44,7 +45,22 @@ impl Plugin for HeadCameraControllerPlugin {
         app.add_plugins(InputManagerPlugin::<CameraMovement>::default());
         app.configure_sets(Update, HeadCameraSet);
 
-        app.add_systems(Update, input.in_set(HeadCameraControllerPluginSet));
+        app.add_systems(
+            Update,
+            (handle_player_target, input).in_set(HeadCameraControllerPluginSet),
+        );
+    }
+}
+
+fn handle_player_target(
+    mut commands: Commands,
+    mut q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerCharacter>)>,
+) {
+    for (entity, is_controlled) in &mut q_player {
+        if is_controlled {
+            debug!("Adding HeadCameraTarget to controlled and predicted entity {entity:?}");
+            commands.entity(entity).insert((HeadCameraTarget,));
+        }
     }
 }
 

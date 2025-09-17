@@ -1,6 +1,6 @@
+use crate::helpers::{chunk_map::prelude::*, tilemap::prelude::*};
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
-use crate::helpers::{chunk_map::prelude::*, tilemap::prelude::*};
 
 use super::components::*;
 

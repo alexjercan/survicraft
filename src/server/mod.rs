@@ -5,8 +5,8 @@ mod player;
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::{ServerPlugin, ServerPluginSet};
     pub use super::network::ServerListener;
+    pub use super::{ServerPlugin, ServerPluginSet};
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -17,7 +17,10 @@ pub struct ServerPlugin;
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(network::NetworkPlugin);
-        app.configure_sets(FixedUpdate, network::NetworkPluginSet.in_set(ServerPluginSet));
+        app.configure_sets(
+            FixedUpdate,
+            network::NetworkPluginSet.in_set(ServerPluginSet),
+        );
 
         app.add_plugins(chat::ChatPlugin);
         app.configure_sets(FixedUpdate, chat::ChatPluginSet.in_set(ServerPluginSet));

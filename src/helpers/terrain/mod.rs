@@ -17,9 +17,9 @@ use self::geometry::{TerrainGeometryPlugin, TerrainGeometryPluginSet};
 use bevy::prelude::*;
 
 pub mod prelude {
+    pub use super::render::{TerrainRenderPlugin, TerrainRenderPluginSet};
     pub use super::resources::*;
     pub use super::{TerrainPlugin, TerrainPluginSet};
-    pub use super::render::{TerrainRenderPlugin, TerrainRenderPluginSet};
 }
 
 pub(crate) const TILE_SIZE: Vec2 = Vec2::splat(1.0);

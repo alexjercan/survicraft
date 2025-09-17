@@ -1,21 +1,21 @@
 //! TODO: Add module-level documentation
 
-mod setup;
-mod tilemap;
 mod camera;
-mod terrain;
-mod chunk_map;
 mod chat;
+mod chunk_map;
 mod player;
+mod setup;
+mod terrain;
+mod tilemap;
 
 mod glue;
 
 pub mod prelude {
-    pub use super::setup::*;
-    pub use super::tilemap::prelude::*;
     pub use super::camera::prelude::*;
-    pub use super::terrain::prelude::*;
-    pub use super::chunk_map::prelude::*;
     pub use super::chat::prelude::*;
+    pub use super::chunk_map::prelude::*;
     pub use super::player::prelude::*;
+    pub use super::setup::*;
+    pub use super::terrain::prelude::*;
+    pub use super::tilemap::prelude::*;
 }

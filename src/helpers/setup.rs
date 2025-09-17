@@ -67,9 +67,8 @@ pub fn new_headless_app() -> App {
 mod debug {
     use bevy::{prelude::*, render::view::RenderLayers};
     use bevy_inspector_egui::{
-        DefaultInspectorConfigPlugin,
         bevy_egui::{EguiContext, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext},
-        bevy_inspector, egui,
+        bevy_inspector, egui, DefaultInspectorConfigPlugin,
     };
     use iyes_perf_ui::prelude::*;
 

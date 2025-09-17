@@ -1,8 +1,8 @@
+use crate::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::prelude::{input::InputBuffer, server::ClientOf, *};
-use crate::prelude::*;
 
 pub struct LoggingDebugPlugin;
 
@@ -61,7 +61,7 @@ pub(crate) fn last_log(
     let (timeline, rollback) = timeline.into_inner();
     let tick = timeline.tick();
 
-    for (entity, position, transform/*, interpolate*/, correction) in players.iter() {
+    for (entity, position, transform /*, interpolate*/, correction) in players.iter() {
         info!(
             ?rollback,
             ?tick,

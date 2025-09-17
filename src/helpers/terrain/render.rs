@@ -1,5 +1,7 @@
 //! TODO: Add documentation
 
+use super::components::*;
+use crate::helpers::{terrain::prelude::*, tilemap::prelude::*};
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
@@ -8,8 +10,6 @@ use bevy::{
         storage::ShaderStorageBuffer,
     },
 };
-use super::components::*;
-use crate::helpers::{terrain::prelude::*, tilemap::prelude::*};
 
 #[cfg(feature = "debug")]
 use self::debug::*;
@@ -49,17 +49,14 @@ impl Plugin for TerrainRenderPlugin {
         #[cfg(feature = "debug")]
         app.configure_sets(Update, DebugPluginSet.in_set(TerrainRenderPluginSet));
 
-        app.insert_resource(RenderSettings::new(
-            self.tile_size,
-            self.chunk_radius,
-        ))
-        .add_plugins(MaterialPlugin::<
-            ExtendedMaterial<StandardMaterial, ChunkMaterial>,
-        >::default())
-        .add_systems(
-            Update,
-            (generate_chunk_render).in_set(TerrainRenderPluginSet),
-        );
+        app.insert_resource(RenderSettings::new(self.tile_size, self.chunk_radius))
+            .add_plugins(MaterialPlugin::<
+                ExtendedMaterial<StandardMaterial, ChunkMaterial>,
+            >::default())
+            .add_systems(
+                Update,
+                (generate_chunk_render).in_set(TerrainRenderPluginSet),
+            );
     }
 }
 
@@ -95,7 +92,10 @@ fn generate_chunk_render(
     if q_meshes.is_empty() {
         return;
     }
-    debug!("Generating render data for {} chunk meshes", q_meshes.iter().len());
+    debug!(
+        "Generating render data for {} chunk meshes",
+        q_meshes.iter().len()
+    );
 
     let size = layout.chunk_radius * 2 + 1;
     for (entity, ChunkMesh(mesh), ChildOf(chunk)) in q_meshes.iter() {
@@ -151,9 +151,7 @@ impl MaterialExtension for ChunkMaterial {
 #[cfg(feature = "debug")]
 mod debug {
     use super::*;
-    use bevy::{
-        pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
-    };
+    use bevy::pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin};
 
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
     struct ShowGrid(pub bool);
@@ -171,7 +169,10 @@ mod debug {
                     default_color: Color::WHITE,
                 });
             app.insert_resource(ShowGrid(true));
-            app.add_systems(Update, (toggle, draw_grid, undraw_grid).in_set(DebugPluginSet));
+            app.add_systems(
+                Update,
+                (toggle, draw_grid, undraw_grid).in_set(DebugPluginSet),
+            );
         }
     }
 

@@ -1,8 +1,8 @@
 //! TODO: Documentation
 
+use super::components::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use super::components::*;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TerrainColliderPluginSet;

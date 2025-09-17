@@ -10,7 +10,7 @@ use bevy::{
         world::CommandQueue,
     },
     prelude::*,
-    tasks::{AsyncComputeTaskPool, Task, block_on, futures_lite::future},
+    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
 };
 use itertools::Itertools;
 
@@ -122,7 +122,11 @@ fn create_task<T, U, F>(
             })
             .collect_vec();
 
-        debug!("Creating compute task for chunk {:?} with {} points", chunk_entity, chunk.len());
+        debug!(
+            "Creating compute task for chunk {:?} with {} points",
+            chunk_entity,
+            chunk.len()
+        );
 
         for (child_entity, _) in chunk.iter() {
             commands

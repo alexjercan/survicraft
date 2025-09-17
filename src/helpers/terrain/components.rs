@@ -1,7 +1,7 @@
 //! TODO: Document components module
 
-use bevy::prelude::*;
 use super::resources::*;
+use bevy::prelude::*;
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct Tile(pub TileID);
