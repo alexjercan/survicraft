@@ -36,7 +36,8 @@ fn handle_spawn_player(
                 PlayerId(*peer),
                 Name::new("Player"),
                 ActionState::<CharacterAction>::default(),
-                Position(Vec3::new(0.0, 3.0, 0.0)),
+                Position(Vec3::new(0.0, 3.0, 0.0)), // TODO: Make sure the position is valid in the
+                                                    // map
                 Replicate::to_clients(NetworkTarget::All),
                 PredictionTarget::to_clients(NetworkTarget::All),
                 ControlledBy {

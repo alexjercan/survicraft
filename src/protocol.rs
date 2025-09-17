@@ -169,6 +169,7 @@ impl Plugin for ProtocolPlugin {
         .add_direction(NetworkDirection::Bidirectional);
 
         app.add_observer(add_player_character);
+        app.add_systems(Update, update_player_character);
     }
 }
 
@@ -198,4 +199,16 @@ fn add_player_character(
     }
 
     commands.entity(entity).insert(PlayerCharacterController);
+}
+
+fn update_player_character(
+    mut q_player: Query<
+        (&mut PlayerCharacterInput, &ActionState<CharacterAction>),
+        With<PlayerCharacterController>,
+    >,
+) {
+    for (mut input, action_state) in q_player.iter_mut() {
+        input.move_axis = action_state.axis_pair(&CharacterAction::Move);
+        input.jump = action_state.just_pressed(&CharacterAction::Jump);
+    }
 }

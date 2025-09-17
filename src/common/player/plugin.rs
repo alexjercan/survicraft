@@ -1,18 +1,12 @@
 //! TODO: Add documentation
 
-// NOTE: I don't want to depend on protocol here, so ideally I would have some intermediary
-// Component for the input actions, but for now this is fine. But when I will copy paste
-// this into another project, I will want to avoid this dependency.
-
-use crate::protocol::prelude::*;
 use avian3d::prelude::*;
 use bevy::{ecs::query::QueryData, prelude::*};
-use leafwing_input_manager::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        PlayerCharacterController, PlayerPlugin, PlayerPluginSet, CHARACTER_CAPSULE_HEIGHT,
-        CHARACTER_CAPSULE_RADIUS,
+        PlayerCharacterController, PlayerCharacterInput, PlayerPlugin, PlayerPluginSet,
+        CHARACTER_CAPSULE_HEIGHT, CHARACTER_CAPSULE_RADIUS,
     };
 }
 
@@ -23,6 +17,13 @@ pub const CHARACTER_CAPSULE_HEIGHT: f32 = 1.0;
 /// want to attach a player bundle and have it be controlled by a player.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PlayerCharacterController;
+
+/// The input component for the player character, which stores the current input state.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct PlayerCharacterInput {
+    pub move_axis: Vec2,
+    pub jump: bool,
+}
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PlayerPluginSet;
@@ -41,25 +42,20 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn handle_spawn_player(
-    trigger: Trigger<OnAdd, PlayerCharacterController>,
-    mut commands: Commands,
-) {
-    commands
-        .entity(trigger.target())
-        .insert((CharacterPhysicsBundle::default(),));
+fn handle_spawn_player(trigger: Trigger<OnAdd, PlayerCharacterController>, mut commands: Commands) {
+    commands.entity(trigger.target()).insert((
+        PlayerCharacterInput::default(),
+        CharacterPhysicsBundle::default(),
+    ));
 }
 
 fn handle_character_actions(
     time: Res<Time>,
     spatial_query: SpatialQuery,
-    mut query: Query<
-        (&ActionState<CharacterAction>, CharacterQuery),
-        With<PlayerCharacterController>,
-    >,
+    mut query: Query<(&PlayerCharacterInput, CharacterQuery), With<PlayerCharacterController>>,
 ) {
-    for (action_state, mut character) in &mut query {
-        apply_character_action(&time, &spatial_query, action_state, &mut character);
+    for (input, mut character) in &mut query {
+        apply_character_action(&time, &spatial_query, input, &mut character);
     }
 }
 
@@ -104,7 +100,7 @@ struct CharacterQuery {
 fn apply_character_action(
     time: &Res<Time>,
     spatial_query: &SpatialQuery,
-    action_state: &ActionState<CharacterAction>,
+    input: &PlayerCharacterInput,
     character: &mut CharacterQueryItem,
 ) {
     const MAX_SPEED: f32 = 5.0;
@@ -114,7 +110,7 @@ fn apply_character_action(
     let max_velocity_delta_per_tick = MAX_ACCELERATION * time.delta_secs();
 
     // Handle jumping.
-    if action_state.just_pressed(&CharacterAction::Jump) {
+    if input.jump {
         let ray_cast_origin = character.position.0
             + Vec3::new(
                 0.0,
@@ -143,9 +139,7 @@ fn apply_character_action(
     }
 
     // Handle moving.
-    let move_dir = action_state
-        .axis_pair(&CharacterAction::Move)
-        .clamp_length_max(1.0);
+    let move_dir = input.move_axis.clamp_length_max(1.0);
     let move_dir = Vec3::new(-move_dir.x, 0.0, move_dir.y);
 
     // Linear velocity of the character ignoring vertical speed.

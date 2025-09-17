@@ -68,7 +68,7 @@ fn on_client_connection_added(
         .insert((
             Name::new("Client"),
             Client::default(),
-            Link::new(None), // TODO: Check examples in lightyear
+            Link::new(None),
             LocalAddr(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)),
             PeerAddr(connection.address),
             ReplicationReceiver::default(),

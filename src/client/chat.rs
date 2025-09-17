@@ -1,6 +1,6 @@
 //! The Chat plugin provides a simple chat UI and handles sending and receiving chat messages.
 
-use crate::{common::prelude::*, protocol::prelude::*};
+use crate::{helpers::prelude::*, protocol::prelude::*};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 
