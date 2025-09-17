@@ -77,7 +77,6 @@ impl Plugin for LauncherPlugin {
         app.add_systems(Update, (
             lock_on_left_click,
             unlock_on_escape,
-            cursor_recenter,
         ).run_if(in_state(LauncherStates::Playing)));
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
@@ -377,14 +376,5 @@ fn unlock_on_escape(
             window.cursor_options.grab_mode = CursorGrabMode::None;
             window.cursor_options.visible = true;
         }
-    }
-}
-
-fn cursor_recenter(
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    if let Ok(mut window) = windows.single_mut() {
-        let center = Vec2::new(window.width() * 0.5, window.height() * 0.5);
-        window.set_cursor_position(Some(center));
     }
 }

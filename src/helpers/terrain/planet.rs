@@ -8,7 +8,7 @@ use super::components::*;
 const CURRENT_SEED: u32 = 0;
 
 /// Scale of the planet. Change this to zoom in or out.
-const ZOOM_SCALE: f64 = 0.01;
+const ZOOM_SCALE: f64 = 0.001;
 
 /// Frequency of the planet's continents. Higher frequency produces
 /// smaller, more numerous continents. This value is measured in radians.
