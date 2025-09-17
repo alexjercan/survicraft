@@ -63,12 +63,13 @@ fn on_client_connection_added(
         protocol_id: PROTOCOL_ID,
     };
 
+    let conditioner = LinkConditionerConfig::average_condition();
     let client = commands
         .entity(entity)
         .insert((
             Name::new("Client"),
             Client::default(),
-            Link::new(None),
+            Link::new(Some(RecvLinkConditioner::new(conditioner.clone()))),
             LocalAddr(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)),
             PeerAddr(connection.address),
             ReplicationReceiver::default(),

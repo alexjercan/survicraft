@@ -81,7 +81,7 @@ pub struct ProtocolPlugin;
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
         // Input handling
-        app.add_plugins(InputPlugin {
+        app.add_plugins(InputPlugin::<CharacterAction> {
             config: InputConfig::<CharacterAction> {
                 rebroadcast_inputs: true,
                 ..default()
@@ -169,8 +169,6 @@ impl Plugin for ProtocolPlugin {
 
         app.add_observer(add_player_character);
         app.add_systems(Update, update_player_character);
-
-        app.add_systems(Update, testing_query);
     }
 }
 
@@ -211,13 +209,5 @@ fn update_player_character(
     for (mut input, action_state) in q_player.iter_mut() {
         input.move_axis = action_state.axis_pair(&CharacterAction::Move);
         input.jump = action_state.just_pressed(&CharacterAction::Jump);
-    }
-}
-
-fn testing_query(
-    q_confirmed: Query<(Entity, &Confirmed) /*, Without<LeafwingSequence<CharacterAction>>>, */ >,
-) {
-    for (entity, confirmed) in q_confirmed.iter() {
-        info!("Entity {:?} is confirmed: {:?}", entity, confirmed);
     }
 }
