@@ -153,7 +153,6 @@ mod debug {
     use super::*;
     use bevy::{
         pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
-        prelude::*,
     };
 
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]

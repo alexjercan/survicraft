@@ -119,6 +119,17 @@ impl Plugin for LauncherPlugin {
             PlayerRenderPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
+        // The head camera controller will run only in the Playing state
+        app.add_systems(
+            OnEnter(LauncherStates::Playing),
+            setup_controller,
+        );
+        app.add_plugins(HeadCameraControllerPlugin);
+        app.configure_sets(
+            Update,
+            HeadCameraControllerPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
+
         // --- Client and Server plugins below here ---
 
         // The server plugin will run only if we are the server (i.e. hosting)
@@ -141,12 +152,7 @@ impl Plugin for LauncherPlugin {
         // NOTE: For debugging purposes
         app.add_systems(
             OnEnter(LauncherStates::Playing),
-            (setup_controller, create_a_single_test_chunk),
-        );
-        app.add_plugins(WASDCameraControllerPlugin);
-        app.configure_sets(
-            Update,
-            WASDCameraControllerPluginSet.run_if(in_state(LauncherStates::Playing)),
+            create_a_single_test_chunk,
         );
     }
 }
@@ -327,10 +333,10 @@ fn setup_terrain_assets(mut commands: Commands) {
 
 fn setup_controller(mut commands: Commands) {
     commands.spawn((
-        WASDCameraControllerBundle::default(),
+        HeadCameraControllerBundle::default(),
         Camera3d::default(),
         Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
-        Name::new("RTS Camera"),
+        Name::new("Head Camera"),
     ));
 
     commands.spawn((

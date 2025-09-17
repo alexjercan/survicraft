@@ -30,6 +30,8 @@ pub enum CharacterAction {
     #[actionlike(DualAxis)]
     Move,
     Jump,
+    #[actionlike(DualAxis)]
+    Look,
 }
 
 // --- Components ---
@@ -83,6 +85,7 @@ impl Plugin for ProtocolPlugin {
         // Input handling
         app.add_plugins(InputPlugin::<CharacterAction> {
             config: InputConfig::<CharacterAction> {
+                // NOTE: for some reason rebroadcast also broadcasts to the same client, that sucks
                 rebroadcast_inputs: true,
                 ..default()
             },
@@ -187,6 +190,8 @@ fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
     this.angle_between(that.0) >= 0.01
 }
 
+// TODO: Might want to move some of these into `common`
+
 fn add_player_character(
     trigger: Trigger<OnAdd, PlayerCharacter>,
     q_player: Query<Entity, (With<PlayerCharacter>, Without<Replicated>)>,
@@ -209,5 +214,6 @@ fn update_player_character(
     for (mut input, action_state) in q_player.iter_mut() {
         input.move_axis = action_state.axis_pair(&CharacterAction::Move);
         input.jump = action_state.just_pressed(&CharacterAction::Jump);
+        input.look = action_state.axis_pair(&CharacterAction::Look);
     }
 }

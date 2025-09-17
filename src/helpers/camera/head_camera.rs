@@ -58,7 +58,9 @@ fn sync_transform(
         let pitch_delta = -input.move_axis.y * camera.look_sensitivity;
         let (_, current_pitch, _) = transform.rotation.to_euler(EulerRot::YXZ);
         let new_pitch = (current_pitch + pitch_delta).clamp(camera.min_pitch, camera.max_pitch);
-        transform.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, new_pitch, 0.0);
+        let (target_yaw, _, _) = target_transform.rotation().to_euler(EulerRot::YXZ);
+
+        transform.rotation = Quat::from_euler(EulerRot::YXZ, target_yaw, new_pitch, 0.0);
         transform.translation = target_transform.translation() + camera.offset;
 
         // TODO: Handle yaw separately for free look

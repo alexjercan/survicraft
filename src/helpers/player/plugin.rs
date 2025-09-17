@@ -23,6 +23,7 @@ pub struct PlayerCharacterController;
 pub struct PlayerCharacterInput {
     pub move_axis: Vec2,
     pub jump: bool,
+    pub look: Vec2,
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -51,11 +52,11 @@ fn handle_spawn_player(trigger: Trigger<OnAdd, PlayerCharacterController>, mut c
 
 fn handle_character_actions(
     time: Res<Time>,
-    spatial_query: SpatialQuery,
-    mut query: Query<(&PlayerCharacterInput, CharacterQuery), With<PlayerCharacterController>>,
+    // spatial_query: SpatialQuery,
+    mut q_player: Query<(&PlayerCharacterInput, CharacterQuery), With<PlayerCharacterController>>,
 ) {
-    for (input, mut character) in &mut query {
-        apply_character_action(&time, &spatial_query, input, &mut character);
+    for (input, mut character) in &mut q_player {
+        apply_character_action(&time, /*&spatial_query,*/ input, &mut character);
     }
 }
 
@@ -93,82 +94,82 @@ struct CharacterQuery {
     linear_velocity: &'static LinearVelocity,
     mass: &'static ComputedMass,
     position: &'static Position,
+    rotation: &'static mut Rotation,
     entity: Entity,
 }
 
 /// Apply the character actions `action_state` to the character entity `character`.
 fn apply_character_action(
     time: &Res<Time>,
-    spatial_query: &SpatialQuery,
+    // spatial_query: &SpatialQuery,
     input: &PlayerCharacterInput,
     character: &mut CharacterQueryItem,
 ) {
     const MAX_SPEED: f32 = 5.0;
     const MAX_ACCELERATION: f32 = 20.0;
+    const LOOK_SENSITIVITY: f32 = 0.003;
 
-    // How much velocity can change in a single tick given the max acceleration.
-    let max_velocity_delta_per_tick = MAX_ACCELERATION * time.delta_secs();
+    // === ROTATION ===
+    // Rotate player around Y axis by look.x (yaw)
+    let yaw_delta = input.look.x * LOOK_SENSITIVITY;
+    let yaw_rotation = Quat::from_rotation_y(yaw_delta);
+    character.rotation.0 = yaw_rotation * character.rotation.0;
 
-    // Handle jumping.
-    if input.jump {
-        let ray_cast_origin = character.position.0
-            + Vec3::new(
-                0.0,
-                -CHARACTER_CAPSULE_HEIGHT / 2.0 - CHARACTER_CAPSULE_RADIUS,
-                0.0,
-            );
+    // === MOVEMENT ===
+    let move_input = input.move_axis.clamp_length_max(1.0);
+    let local_move = Vec3::new(move_input.x, 0.0, move_input.y); // X=strafe, Y=forward
 
-        // Only jump if the character is on the ground.
-        //
-        // Check if we are touching the ground by sending a ray from the bottom
-        // of the character downwards.
-        if spatial_query
-            .cast_ray(
-                ray_cast_origin,
-                Dir3::NEG_Y,
-                0.01,
-                true,
-                &SpatialQueryFilter::from_excluded_entities([character.entity]),
-            )
-            .is_some()
-        {
-            character
-                .external_impulse
-                .apply_impulse(Vec3::new(0.0, 5.0, 0.0));
-        }
-    }
+    // Rotate move direction by the player's current facing rotation
+    let world_move = character.rotation.0 * local_move;
 
-    // Handle moving.
-    let move_dir = input.move_axis.clamp_length_max(1.0);
-    let move_dir = Vec3::new(-move_dir.x, 0.0, move_dir.y);
-
-    // Linear velocity of the character ignoring vertical speed.
+    // Current horizontal velocity
     let ground_linear_velocity = Vec3::new(
         character.linear_velocity.x,
         0.0,
         character.linear_velocity.z,
     );
 
-    let desired_ground_linear_velocity = move_dir * MAX_SPEED;
+    // Desired velocity
+    let desired_ground_linear_velocity = world_move * MAX_SPEED;
 
+    // Smooth acceleration
+    let max_velocity_delta_per_tick = MAX_ACCELERATION * time.delta_secs();
     let new_ground_linear_velocity = ground_linear_velocity
         .move_towards(desired_ground_linear_velocity, max_velocity_delta_per_tick);
 
-    // Acceleration required to change the linear velocity from
-    // `ground_linear_velocity` to `new_ground_linear_velocity` in the duration
-    // of a single tick.
-    //
-    // There is no need to clamp the acceleration's length to
-    // `MAX_ACCELERATION`. The difference between `ground_linear_velocity` and
-    // `new_ground_linear_velocity` is never great enough to require more than
-    // `MAX_ACCELERATION` in a single tick, This is because
-    // `new_ground_linear_velocity` is calculated using
-    // `max_velocity_delta_per_tick` which restricts how much the velocity can
-    // change in a single tick based on `MAX_ACCELERATION`.
     let required_acceleration =
         (new_ground_linear_velocity - ground_linear_velocity) / time.delta_secs();
 
     character
         .external_force
         .apply_force(required_acceleration * character.mass.value());
+
+    // // Handle jumping.
+    // if input.jump {
+    //     let ray_cast_origin = character.position.0
+    //         + Vec3::new(
+    //             0.0,
+    //             -CHARACTER_CAPSULE_HEIGHT / 2.0 - CHARACTER_CAPSULE_RADIUS,
+    //             0.0,
+    //         );
+
+    //     // Only jump if the character is on the ground.
+    //     //
+    //     // Check if we are touching the ground by sending a ray from the bottom
+    //     // of the character downwards.
+    //     if spatial_query
+    //         .cast_ray(
+    //             ray_cast_origin,
+    //             Dir3::NEG_Y,
+    //             0.01,
+    //             true,
+    //             &SpatialQueryFilter::from_excluded_entities([character.entity]),
+    //         )
+    //         .is_some()
+    //     {
+    //         character
+    //             .external_impulse
+    //             .apply_impulse(Vec3::new(0.0, 5.0, 0.0));
+    //     }
+    // }
 }

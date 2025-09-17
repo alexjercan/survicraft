@@ -3,6 +3,11 @@
 use super::prelude::*;
 use bevy::prelude::*;
 
+pub mod prelude {
+    pub use super::PlayerRenderPlugin;
+    pub use super::PlayerRenderPluginSet;
+}
+
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PlayerRenderPluginSet;
 

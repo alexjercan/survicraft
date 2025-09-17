@@ -1,6 +1,6 @@
 //! The player plugin handles the client side player logic.
 
-use crate::protocol::prelude::*;
+use crate::{prelude::HeadCameraTarget, protocol::prelude::*};
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::prelude::*;
@@ -23,12 +23,15 @@ fn handle_spawn_player(
     for (entity, is_controlled) in &mut q_player {
         if is_controlled {
             debug!("Adding InputMap to controlled and predicted entity {entity:?}");
-            commands.entity(entity).insert(
+            commands.entity(entity).insert((
                 InputMap::new([(CharacterAction::Jump, KeyCode::Space)])
                     .with(CharacterAction::Jump, GamepadButton::South)
                     .with_dual_axis(CharacterAction::Move, GamepadStick::LEFT)
-                    .with_dual_axis(CharacterAction::Move, VirtualDPad::wasd()),
-            );
+                    .with_dual_axis(CharacterAction::Move, VirtualDPad::wasd())
+                    .with_dual_axis(CharacterAction::Look, GamepadStick::RIGHT)
+                    .with_dual_axis(CharacterAction::Look, MouseMove::default()),
+                HeadCameraTarget,
+            ));
         } else {
             debug!("Remote character predicted for us: {entity:?}");
         }
