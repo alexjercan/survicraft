@@ -31,6 +31,7 @@ impl Default for HeadCamera {
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct HeadCameraInput {
     pub move_axis: Vec2,
+    pub free_look: bool,
 }
 
 /// Target for the Head camera to follow.
@@ -60,9 +61,14 @@ fn sync_transform(
         let new_pitch = (current_pitch + pitch_delta).clamp(camera.min_pitch, camera.max_pitch);
         let (target_yaw, _, _) = target_transform.rotation().to_euler(EulerRot::YXZ);
 
-        transform.rotation = Quat::from_euler(EulerRot::YXZ, target_yaw, new_pitch, 0.0);
-        transform.translation = target_transform.translation() + camera.offset;
+        if input.free_look {
+            let yaw_delta = -input.move_axis.x * camera.look_sensitivity;
+            let new_yaw = target_yaw + yaw_delta;
+            transform.rotation = Quat::from_euler(EulerRot::YXZ, new_yaw, new_pitch, 0.0);
+        } else {
+            transform.rotation = Quat::from_euler(EulerRot::YXZ, target_yaw, new_pitch, 0.0);
+        }
 
-        // TODO: Handle yaw separately for free look
+        transform.translation = target_transform.translation() + camera.offset;
     }
 }

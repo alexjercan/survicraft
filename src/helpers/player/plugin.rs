@@ -107,17 +107,17 @@ fn apply_character_action(
 ) {
     const MAX_SPEED: f32 = 5.0;
     const MAX_ACCELERATION: f32 = 20.0;
-    const LOOK_SENSITIVITY: f32 = 0.003;
+    const LOOK_SENSITIVITY: f32 = 0.0025;
 
     // === ROTATION ===
     // Rotate player around Y axis by look.x (yaw)
-    let yaw_delta = input.look.x * LOOK_SENSITIVITY;
+    let yaw_delta = -input.look.x * LOOK_SENSITIVITY;
     let yaw_rotation = Quat::from_rotation_y(yaw_delta);
     character.rotation.0 = yaw_rotation * character.rotation.0;
 
     // === MOVEMENT ===
     let move_input = input.move_axis.clamp_length_max(1.0);
-    let local_move = Vec3::new(move_input.x, 0.0, move_input.y); // X=strafe, Y=forward
+    let local_move = Vec3::new(move_input.x, 0.0, -move_input.y); // X=strafe, Y=forward
 
     // Rotate move direction by the player's current facing rotation
     let world_move = character.rotation.0 * local_move;

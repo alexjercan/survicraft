@@ -6,6 +6,7 @@ use leafwing_input_manager::prelude::*;
 enum CameraMovement {
     #[actionlike(DualAxis)]
     MoveAxis,
+    FreeLook,
 }
 
 #[derive(Bundle, Clone, Debug)]
@@ -25,7 +26,9 @@ impl Default for HeadCameraControllerBundle {
             input: HeadCameraInput::default(),
             map: InputMap::default()
                 .with_dual_axis(CameraMovement::MoveAxis, MouseMove::default())
-                .with_dual_axis(CameraMovement::MoveAxis, GamepadStick::RIGHT),
+                .with_dual_axis(CameraMovement::MoveAxis, GamepadStick::RIGHT)
+                .with(CameraMovement::FreeLook, KeyCode::AltLeft)
+                .with(CameraMovement::FreeLook, GamepadButton::LeftTrigger),
         }
     }
 }
