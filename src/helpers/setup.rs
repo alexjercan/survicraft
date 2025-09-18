@@ -1,11 +1,7 @@
 //! This module contains functions to create new Bevy apps with different configurations.
 
 use bevy::{
-    diagnostic::DiagnosticsPlugin,
-    log::{Level, LogPlugin},
-    prelude::*,
-    state::app::StatesPlugin,
-    window::PresentMode,
+    diagnostic::DiagnosticsPlugin, log::{Level, LogPlugin}, prelude::*, render::mesh::MeshPlugin, state::app::StatesPlugin, window::PresentMode
 };
 
 #[cfg(feature = "debug")]
@@ -59,6 +55,11 @@ pub fn new_headless_app() -> App {
         log_plugin(),
         StatesPlugin,
         DiagnosticsPlugin,
+        AssetPlugin {
+            meta_check: bevy::asset::AssetMetaCheck::Never,
+            ..default()
+        },
+        MeshPlugin,
     ));
     app
 }
