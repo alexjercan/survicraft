@@ -3,6 +3,31 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::prelude::*;
 
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PlayerControllerPluginSet;
+
+pub struct PlayerControllerPlugin;
+
+impl Plugin for PlayerControllerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(HeadCameraPlugin);
+        app.add_plugins(InputManagerPlugin::<CameraMovement>::default());
+        app.configure_sets(Update, HeadCameraSet);
+
+        app.add_systems(
+            Update,
+            (
+                handle_player_character,
+                handle_spawn_player,
+                handle_player_target,
+                update_camera_input,
+                update_player_input,
+            )
+                .in_set(PlayerControllerPluginSet),
+        );
+    }
+}
+
 #[derive(Actionlike, Clone, Debug, Copy, PartialEq, Eq, Hash, Reflect)]
 enum CameraMovement {
     #[actionlike(DualAxis)]
@@ -34,42 +59,14 @@ impl Default for HeadCameraControllerBundle {
     }
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HeadCameraControllerPluginSet;
-
-pub struct HeadCameraControllerPlugin;
-
-impl Plugin for HeadCameraControllerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(HeadCameraPlugin);
-        app.add_plugins(InputManagerPlugin::<CameraMovement>::default());
-        app.configure_sets(Update, HeadCameraSet);
-
-        app.add_observer(add_player_character);
-        app.add_systems(
-            Update,
-            (
-                handle_player_target,
-                update_camera_input,
-                update_player_input,
-            )
-                .in_set(HeadCameraControllerPluginSet),
-        );
-    }
-}
-
-fn add_player_character(
-    trigger: Trigger<OnAdd, PlayerCharacter>,
-    q_player: Query<Entity, (With<PlayerCharacter>, Without<Replicated>)>,
+fn handle_player_character(
     mut commands: Commands,
+    q_player: Query<Entity, (Added<Predicted>, With<PlayerCharacter>)>,
 ) {
-    let entity = trigger.target();
-    if !q_player.contains(entity) {
-        return;
+    for entity in &q_player {
+        debug!("Adding PlayerCharacterController to entity {entity:?}");
+        commands.entity(entity).insert((PlayerCharacterController,));
     }
-
-    info!("Adding PlayerCharacterController to entity {entity:?}");
-    commands.entity(entity).insert(PlayerCharacterController);
 }
 
 fn handle_player_target(
@@ -80,6 +77,28 @@ fn handle_player_target(
         if is_controlled {
             debug!("Adding HeadCameraTarget to controlled and predicted entity {entity:?}");
             commands.entity(entity).insert((HeadCameraTarget,));
+        }
+    }
+}
+
+fn handle_spawn_player(
+    mut commands: Commands,
+    mut q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerCharacter>)>,
+) {
+    for (entity, is_controlled) in &mut q_player {
+        if is_controlled {
+            debug!("Adding InputMap to controlled and predicted entity {entity:?}");
+            commands.entity(entity).insert((InputMap::new([(
+                CharacterAction::Jump,
+                KeyCode::Space,
+            )])
+            .with(CharacterAction::Jump, GamepadButton::South)
+            .with_dual_axis(CharacterAction::Move, GamepadStick::LEFT)
+            .with_dual_axis(CharacterAction::Move, VirtualDPad::wasd())
+            .with_dual_axis(CharacterAction::Look, GamepadStick::RIGHT)
+            .with_dual_axis(CharacterAction::Look, MouseMove::default()),));
+        } else {
+            debug!("Remote character predicted for us: {entity:?}");
         }
     }
 }

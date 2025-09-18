@@ -73,11 +73,18 @@ impl Plugin for LauncherPlugin {
 
         // --- Playing related stuff below here ---
 
-        // NOTE: Just for testing, lock cursor on left click and unlock on escape
-        app.add_systems(Update, (
-            lock_on_left_click,
-            unlock_on_escape,
-        ).run_if(in_state(LauncherStates::Playing)));
+        // Terrain setup. We set up terrain assets and the terrain plugin itself.
+        // This will run only in the Playing state.
+        app.add_plugins(TerrainPlugin::default().with_seed(0));
+        app.configure_sets(
+            Update,
+            TerrainPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
+        app.add_plugins(TerrainRenderPlugin::default());
+        app.configure_sets(
+            Update,
+            TerrainRenderPluginSet.run_if(in_state(LauncherStates::Playing)),
+        );
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
         app.add_plugins(
@@ -94,19 +101,6 @@ impl Plugin for LauncherPlugin {
         app.configure_sets(
             Update,
             ChatPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
-
-        // Terrain setup. We set up terrain assets and the terrain plugin itself.
-        // This will run only in the Playing state.
-        app.add_plugins(TerrainPlugin::default().with_seed(0));
-        app.configure_sets(
-            Update,
-            TerrainPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
-        app.add_plugins(TerrainRenderPlugin::default());
-        app.configure_sets(
-            Update,
-            TerrainRenderPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
         // Player setup. We set up player-related systems and the player plugin.
@@ -127,10 +121,10 @@ impl Plugin for LauncherPlugin {
 
         // The head camera controller will run only in the Playing state
         app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
-        app.add_plugins(HeadCameraControllerPlugin);
+        app.add_plugins(PlayerControllerPlugin);
         app.configure_sets(
             Update,
-            HeadCameraControllerPluginSet.run_if(in_state(LauncherStates::Playing)),
+            PlayerControllerPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
         // --- Client and Server plugins below here ---
@@ -154,6 +148,12 @@ impl Plugin for LauncherPlugin {
 
         // NOTE: For debugging purposes
         app.add_systems(OnEnter(LauncherStates::Playing), create_a_single_test_chunk);
+
+        // NOTE: Just for testing, lock cursor on left click and unlock on escape
+        app.add_systems(Update, (
+            lock_on_left_click,
+            unlock_on_escape,
+        ).run_if(in_state(LauncherStates::Playing)));
     }
 }
 

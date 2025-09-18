@@ -1,6 +1,5 @@
 mod chat;
 mod network;
-mod player;
 
 use bevy::prelude::*;
 
@@ -24,8 +23,5 @@ impl Plugin for ClientPlugin {
 
         app.add_plugins(chat::ChatPlugin);
         app.configure_sets(FixedUpdate, chat::ChatPluginSet.in_set(ClientPluginSet));
-
-        app.add_plugins(player::PlayerPlugin);
-        app.configure_sets(FixedUpdate, player::PlayerPluginSet.in_set(ClientPluginSet));
     }
 }
