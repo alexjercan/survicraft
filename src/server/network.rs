@@ -49,7 +49,15 @@ fn on_server_listener_added(trigger: Trigger<OnAdd, ServerListener>, mut command
     commands.trigger_targets(Start, server);
 }
 
-fn on_new_client(trigger: Trigger<OnAdd, Connected>, mut commands: Commands) {
+fn on_new_client(
+    trigger: Trigger<OnAdd, Connected>,
+    mut commands: Commands,
+    q_server: Query<Entity, With<Server>>,
+) {
+    if q_server.is_empty() {
+        return;
+    }
+
     info!("New client connected: {:?}", trigger.target());
 
     commands

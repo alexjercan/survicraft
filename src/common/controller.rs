@@ -18,7 +18,7 @@ impl Plugin for PlayerControllerPlugin {
             Update,
             (
                 handle_player_character,
-                handle_spawn_player,
+                handle_spawn_player_input,
                 handle_player_target,
                 update_camera_input,
                 update_player_input,
@@ -81,7 +81,7 @@ fn handle_player_target(
     }
 }
 
-fn handle_spawn_player(
+fn handle_spawn_player_input(
     mut commands: Commands,
     mut q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerCharacter>)>,
 ) {

@@ -28,7 +28,8 @@ impl TerrainGenerationPlugin {
 impl Plugin for TerrainGenerationPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Tile>()
-            .register_type::<TileNoiseHeight>();
+            .register_type::<TileNoiseHeight>()
+            .register_type::<TerrainGenerationProgress>();
 
         app.add_plugins(TileMapPlugin::new(
             self.tile_size,
@@ -41,6 +42,12 @@ impl Plugin for TerrainGenerationPlugin {
         .configure_sets(Update, TileMapSet.in_set(TerrainGenerationPluginSet))
         .configure_sets(Update, ChunkMapPluginSet.in_set(TerrainGenerationPluginSet))
         .add_systems(Update, handle_chunk.in_set(TerrainGenerationPluginSet));
+
+        app.insert_resource(TerrainGenerationProgress::default());
+        app.add_systems(
+            Update,
+            handle_chunk_progress.in_set(TerrainGenerationPluginSet),
+        );
     }
 }
 
@@ -68,4 +75,21 @@ fn handle_chunk(
             }
         }
     }
+}
+
+#[derive(Resource, Debug, Clone, Default, Reflect)]
+pub struct TerrainGenerationProgress {
+    pub total_chunks: u32,
+    pub generated_chunks: u32,
+}
+
+fn handle_chunk_progress(
+    mut progress: ResMut<TerrainGenerationProgress>,
+    q_chunks: Query<(&ChunkCoord, Has<ChunkReady>)>,
+) {
+    let total_chunks = q_chunks.iter().count() as u32;
+    let generated_chunks = q_chunks.iter().filter(|(_, ready)| *ready).count() as u32;
+
+    progress.total_chunks = total_chunks;
+    progress.generated_chunks = generated_chunks;
 }

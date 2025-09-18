@@ -11,3 +11,6 @@ pub struct TileNoiseHeight(pub f64);
 
 #[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
 pub struct ChunkMesh(pub Mesh);
+
+#[derive(Component, Debug, Clone, Copy, Reflect)]
+pub struct ChunkReady;

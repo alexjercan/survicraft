@@ -20,6 +20,7 @@ pub mod prelude {
     pub use super::render::{TerrainRenderPlugin, TerrainRenderPluginSet};
     pub use super::resources::*;
     pub use super::{TerrainPlugin, TerrainPluginSet};
+    pub use super::generation::TerrainGenerationProgress;
 }
 
 pub(crate) const TILE_SIZE: Vec2 = Vec2::splat(1.0);

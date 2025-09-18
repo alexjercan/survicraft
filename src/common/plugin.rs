@@ -3,9 +3,13 @@
 use super::{assets::*, main_menu::*};
 use crate::prelude::*;
 use avian3d::prelude::*;
-use bevy::{prelude::*, window::{CursorGrabMode, PrimaryWindow}};
+use bevy::{
+    prelude::*,
+    window::{CursorGrabMode, PrimaryWindow},
+};
 use bevy_asset_loader::prelude::*;
 use bevy_simple_text_input::TextInputPlugin;
+use iyes_progress::prelude::*;
 use lightyear::{
     connection::identity::is_server,
     prelude::{client::ClientPlugins, server::ServerPlugins},
@@ -21,13 +25,23 @@ enum LauncherStates {
     #[default]
     Loading,
     MainMenu,
+    Generating,
     Playing,
+}
+
+#[derive(Resource, Debug, Clone, Default)]
+enum LauncherMode {
+    Client(String), // Server address
+    #[default]
+    Host,
 }
 
 pub struct LauncherPlugin;
 
 impl Plugin for LauncherPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(LauncherMode::default());
+
         // Initialize the state machine
         app.init_state::<LauncherStates>();
         app.enable_state_scoped_entities::<LauncherStates>();
@@ -73,12 +87,31 @@ impl Plugin for LauncherPlugin {
 
         // --- Playing related stuff below here ---
 
+        // Progress plugin to show progress while generating terrain.
+        app.add_plugins(
+            ProgressPlugin::<LauncherStates>::new()
+                .with_state_transition(LauncherStates::Generating, LauncherStates::Playing),
+        );
+        app.add_systems(
+            OnEnter(LauncherStates::Generating),
+            (setup_loading_ui, setup_terrain_generation),
+        );
+        app.add_systems(
+            Update,
+            check_terrain_generation_progress
+                .track_progress::<LauncherStates>()
+                .run_if(in_state(LauncherStates::Generating)),
+        );
+
+        app.add_systems(OnEnter(LauncherStates::Playing), setup_connections);
+
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
         // This will run only in the Playing state.
         app.add_plugins(TerrainPlugin::default().with_seed(0));
         app.configure_sets(
             Update,
-            TerrainPluginSet.run_if(in_state(LauncherStates::Playing)),
+            TerrainPluginSet
+                .run_if(in_state(LauncherStates::Generating).or(in_state(LauncherStates::Playing))),
         );
         app.add_plugins(TerrainRenderPlugin::default());
         app.configure_sets(
@@ -146,14 +179,11 @@ impl Plugin for LauncherPlugin {
             ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
-        // NOTE: For debugging purposes
-        app.add_systems(OnEnter(LauncherStates::Playing), create_a_single_test_chunk);
-
         // NOTE: Just for testing, lock cursor on left click and unlock on escape
-        app.add_systems(Update, (
-            lock_on_left_click,
-            unlock_on_escape,
-        ).run_if(in_state(LauncherStates::Playing)));
+        app.add_systems(
+            Update,
+            (lock_on_left_click, unlock_on_escape).run_if(in_state(LauncherStates::Playing)),
+        );
     }
 }
 
@@ -191,61 +221,94 @@ fn setup_menu(mut commands: Commands, assets: Res<MainMenuAssets>) {
 }
 
 fn handle_play_button_pressed(
-    mut commands: Commands,
     mut ev_play: EventReader<ClientPlayClickEvent>,
     mut next_state: ResMut<NextState<LauncherStates>>,
-    player_name: Res<PlayerNameSetting>,
+    mut mode: ResMut<LauncherMode>,
 ) {
     for _ in ev_play.read() {
         // If the play button is pressed, transition to the Playing state
         // We spawn the ServerListener and ClientConnection entities here
         // to enable hosting mode.
 
-        next_state.set(LauncherStates::Playing);
-
-        let server = commands
-            .spawn((
-                Name::new("ServerListener"),
-                ServerListener,
-                StateScoped(LauncherStates::Playing),
-            ))
-            .id();
-
-        commands.spawn((
-            Name::new("ClientConnection"),
-            HostConnection { server },
-            ClientMetadata {
-                username: (**player_name).clone(),
-            },
-            StateScoped(LauncherStates::Playing),
-        ));
+        next_state.set(LauncherStates::Generating);
+        *mode = LauncherMode::Host;
     }
 }
 
 fn handle_multiplayer_pressed(
-    mut commands: Commands,
     mut ev_multiplayer: EventReader<ClientMultiplayerClickEvent>,
     mut next_state: ResMut<NextState<LauncherStates>>,
-    player_name: Res<PlayerNameSetting>,
+    mut mode: ResMut<LauncherMode>,
 ) {
     for event in ev_multiplayer.read() {
         // If the multiplayer button is pressed, transition to the Playing state
         // We spawn only the ClientConnection entity here to enable joining mode.
 
-        next_state.set(LauncherStates::Playing);
+        next_state.set(LauncherStates::Generating);
+        *mode = LauncherMode::Client(event.address.clone());
+    }
+}
 
-        let addr = IpAddr::from_str(&event.address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
+fn setup_loading_ui() {
+    // TODO: Implement a proper loading UI
+}
 
-        commands.spawn((
-            Name::new("ClientConnection"),
-            ClientConnection {
-                address: SocketAddr::new(addr, SERVER_PORT),
-            },
-            ClientMetadata {
-                username: (**player_name).clone(),
-            },
-            StateScoped(LauncherStates::Playing),
-        ));
+fn setup_terrain_generation(mut ev_discover: EventWriter<TileDiscoverEvent>) {
+    ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO));
+}
+
+fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProgress>) -> Progress {
+    let total = terrain_progress.total_chunks.max(1); // Avoid division by zero
+    info!(
+        "Terrain generation progress: {}/{} chunks",
+        terrain_progress.generated_chunks, total
+    );
+    Progress {
+        done: terrain_progress.generated_chunks,
+        total: total,
+    }
+}
+
+fn setup_connections(
+    mut commands: Commands,
+    mode: Res<LauncherMode>,
+    player_name: Res<PlayerNameSetting>,
+) {
+    info!("Setting up connections in mode: {:?}", *mode);
+
+    match &*mode {
+        LauncherMode::Host => {
+            let server = commands
+                .spawn((
+                    Name::new("ServerListener"),
+                    ServerListener,
+                    StateScoped(LauncherStates::Playing),
+                ))
+                .id();
+
+            commands.spawn((
+                Name::new("ClientConnection"),
+                HostConnection { server },
+                ClientMetadata {
+                    username: (**player_name).clone(),
+                },
+                StateScoped(LauncherStates::Playing),
+            ));
+        }
+        LauncherMode::Client(address) => {
+            let addr = IpAddr::from_str(address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
+
+            commands.spawn((
+                Name::new("ClientConnection"),
+                ClientConnection {
+                    address: SocketAddr::new(addr, SERVER_PORT),
+                },
+                ClientMetadata {
+                    username: (**player_name).clone(),
+                },
+                StateScoped(LauncherStates::Playing),
+            ));
+        }
     }
 }
 
@@ -348,16 +411,11 @@ fn setup_controller(mut commands: Commands) {
     ));
 }
 
-fn create_a_single_test_chunk(mut ev_discover: EventWriter<TileDiscoverEvent>) {
-    ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO));
-}
-
-
 // Mouse lock just for now
 
 fn lock_on_left_click(
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
-    mouse: Res<ButtonInput<MouseButton>>
+    mouse: Res<ButtonInput<MouseButton>>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
         if let Ok(mut window) = windows.single_mut() {
@@ -369,7 +427,7 @@ fn lock_on_left_click(
 
 fn unlock_on_escape(
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
-    keys: Res<ButtonInput<KeyCode>>
+    keys: Res<ButtonInput<KeyCode>>,
 ) {
     if keys.just_pressed(KeyCode::Escape) {
         if let Ok(mut window) = windows.single_mut() {

@@ -79,6 +79,7 @@ itertools = "0.14.0"
 noise = "0.9.0"
 bevy_common_assets = { version = "0.13.0", features = ["ron"] }
 anyhow = "1.0.99"
+iyes_progress = "0.14.0"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]
