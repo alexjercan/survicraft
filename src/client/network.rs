@@ -46,7 +46,7 @@ impl Plugin for NetworkPlugin {
 
 fn on_client_connection_added(
     trigger: Trigger<OnAdd, ClientConnection>,
-    q_connection: Query<&ClientConnection>,
+    q_connection: Query<&ClientConnection, Added<ClientConnection>>,
     mut commands: Commands,
 ) -> Result {
     let entity = trigger.target();
@@ -122,7 +122,7 @@ fn on_welcome_message(
     metadata: Single<&ClientMetadata>,
 ) {
     for message in receiver.receive() {
-        info!("Received welcome message from server: {:?}", message);
+        debug!("Received welcome message from server: {:?}", message);
 
         debug!("Sending client metadata: {:?}", metadata.username);
         sender.send::<MessageChannel>(ClientMetaMessage {

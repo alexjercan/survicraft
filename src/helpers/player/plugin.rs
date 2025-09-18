@@ -33,9 +33,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(handle_spawn_player);
-
-        // FixedUpdate is used here to keep the physics and character logic in sync.
+        app.add_systems(Update, handle_spawn_player.in_set(PlayerPluginSet));
         app.add_systems(
             FixedUpdate,
             handle_character_actions.in_set(PlayerPluginSet),
@@ -43,11 +41,18 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn handle_spawn_player(trigger: Trigger<OnAdd, PlayerCharacterController>, mut commands: Commands) {
-    commands.entity(trigger.target()).insert((
-        PlayerCharacterInput::default(),
-        CharacterPhysicsBundle::default(),
-    ));
+fn handle_spawn_player(
+    mut commands: Commands,
+    q_player: Query<Entity, Added<PlayerCharacterController>>,
+) {
+    for entity in &q_player {
+        debug!("Adding PlayerCharacterInput and CharacterPhysicsBundle to entity {entity:?}");
+
+        commands.entity(entity).insert((
+            PlayerCharacterInput::default(),
+            CharacterPhysicsBundle::default(),
+        ));
+    }
 }
 
 fn handle_character_actions(

@@ -52,14 +52,9 @@ fn on_server_listener_added(trigger: Trigger<OnAdd, ServerListener>, mut command
 fn on_new_client(
     trigger: Trigger<OnAdd, Connected>,
     mut commands: Commands,
-    q_server: Query<Entity, With<Server>>,
+    _server: Single<&Server>,
 ) {
-    if q_server.is_empty() {
-        return;
-    }
-
     info!("New client connected: {:?}", trigger.target());
-
     commands
         .entity(trigger.target())
         .insert(Name::new("Client"))
@@ -80,7 +75,7 @@ fn on_new_connection(
 
     let entity = trigger.target();
     let RemoteId(peer) = q_connected.get(entity)?;
-    info!("Sending welcome message to {:?}", peer);
+    debug!("Sending welcome message to {:?}", peer);
 
     sender.send::<_, MessageChannel>(
         &ServerWelcomeMessage,
@@ -97,7 +92,7 @@ fn on_client_metadata_message(
 ) {
     for (RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
         for message in receiver.receive() {
-            info!("Client {:?} set their name to {}", peer, message.username);
+            debug!("Spawn player metadata for peer {:?}: {:?}", peer, message);
 
             commands.spawn((
                 Name::new("PlayerMetadata"),

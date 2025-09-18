@@ -32,6 +32,8 @@ fn handle_spawn_player(
                 continue;
             }
 
+            debug!("Spawning player character for peer {:?}", peer);
+
             commands.spawn((
                 PlayerId(*peer),
                 Name::new("Player"),
