@@ -87,7 +87,10 @@ mod debug {
     };
     use iyes_perf_ui::prelude::*;
     use leafwing_input_manager::prelude::*;
-    use lightyear::{frame_interpolation::FrameInterpolate, prelude::{input::InputBuffer, server::ClientOf, *}};
+    use lightyear::{
+        frame_interpolation::FrameInterpolate,
+        prelude::{input::InputBuffer, server::ClientOf, *},
+    };
 
     #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
     pub struct InspectorDebugPluginSet;
@@ -204,6 +207,8 @@ mod debug {
                 Entity,
                 &Position,
                 Option<&VisualCorrection<Position>>,
+                &Rotation,
+                Option<&VisualCorrection<Rotation>>,
                 Option<&ActionState<CharacterAction>>,
                 Option<&InputBuffer<ActionState<CharacterAction>>>,
             ),
@@ -213,16 +218,27 @@ mod debug {
         let (timeline, rollback) = timeline.into_inner();
         let tick = timeline.tick();
 
-        for (entity, position, correction, action_state, input_buffer) in players.iter() {
+        for (
+            entity,
+            position,
+            position_correction,
+            rotation,
+            rotation_correction,
+            action_state,
+            input_buffer,
+        ) in players.iter()
+        {
             let pressed = action_state.map(|a| a.axis_pair(&CharacterAction::Move));
             let last_buffer_tick =
                 input_buffer.and_then(|b| b.get_last_with_tick().map(|(t, _)| t));
-            info!(
+            trace!(
                 ?rollback,
                 ?tick,
                 ?entity,
                 ?position,
-                ?correction,
+                ?position_correction,
+                ?rotation,
+                ?rotation_correction,
                 ?pressed,
                 ?last_buffer_tick,
                 "Player - FixedLast"
@@ -236,9 +252,12 @@ mod debug {
             (
                 Entity,
                 &Position,
+                &Rotation,
                 &Transform,
                 Option<&FrameInterpolate<Position>>,
                 Option<&VisualCorrection<Position>>,
+                Option<&FrameInterpolate<Rotation>>,
+                Option<&VisualCorrection<Rotation>>,
             ),
             (With<PlayerCharacter>, Without<Confirmed>),
         >,
@@ -246,15 +265,28 @@ mod debug {
         let (timeline, rollback) = timeline.into_inner();
         let tick = timeline.tick();
 
-        for (entity, position, transform, interpolate, correction) in players.iter() {
-            info!(
+        for (
+            entity,
+            position,
+            rotation,
+            transform,
+            position_interpolate,
+            position_correction,
+            rotation_interpolate,
+            rotation_correction,
+        ) in players.iter()
+        {
+            trace!(
                 ?rollback,
                 ?tick,
                 ?entity,
                 ?position,
+                ?rotation,
                 ?transform,
-                ?interpolate,
-                ?correction,
+                ?position_interpolate,
+                ?position_correction,
+                ?rotation_interpolate,
+                ?rotation_correction,
                 "Player - Last"
             );
         }

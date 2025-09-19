@@ -188,6 +188,14 @@ impl Plugin for ProtocolPlugin {
             .add_interpolation(InterpolationMode::Full)
             .add_linear_interpolation_fn();
 
+        // Do not replicate Transform but register interpolation for visual interpolation
+        app.world_mut()
+            .resource_mut::<InterpolationRegistry>()
+            .set_interpolation::<Transform>(TransformLinearInterpolation::lerp);
+        app.world_mut()
+            .resource_mut::<InterpolationRegistry>()
+            .set_interpolation_mode::<Transform>(InterpolationMode::None);
+
         // Messages and channels
         app.add_message::<ServerWelcomeMessage>()
             .add_direction(NetworkDirection::ServerToClient);
@@ -227,11 +235,11 @@ pub fn get_client_id() -> u64 {
 }
 
 fn position_should_rollback(this: &Position, that: &Position) -> bool {
-    (this.0 - that.0).length() >= f32::EPSILON
+    (this.0 - that.0).length() >= 20.0
 }
 
 fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
-    this.angle_between(that.0) >= f32::EPSILON
+    this.angle_between(that.0) >= 0.1
 }
 
 fn on_server_welcome(

@@ -10,6 +10,9 @@ pub mod prelude {
     };
 }
 
+#[cfg(feature = "debug")]
+use self::debug::{PlayerDebugPlugin};
+
 pub const CHARACTER_CAPSULE_RADIUS: f32 = 0.5;
 pub const CHARACTER_CAPSULE_HEIGHT: f32 = 1.0;
 
@@ -38,6 +41,9 @@ impl Plugin for PlayerPlugin {
             FixedUpdate,
             handle_character_actions.in_set(PlayerPluginSet),
         );
+
+        #[cfg(feature = "debug")]
+        app.add_plugins(PlayerDebugPlugin);
     }
 }
 
@@ -66,7 +72,7 @@ fn handle_character_actions(
 }
 
 #[derive(Bundle)]
-struct CharacterPhysicsBundle {
+pub struct CharacterPhysicsBundle {
     collider: Collider,
     rigid_body: RigidBody,
     external_force: ExternalForce,
@@ -93,7 +99,7 @@ impl Default for CharacterPhysicsBundle {
 
 #[derive(QueryData)]
 #[query_data(mutable, derive(Debug))]
-struct CharacterQuery {
+pub(super) struct CharacterQuery {
     external_force: &'static mut ExternalForce,
     external_impulse: &'static mut ExternalImpulse,
     linear_velocity: &'static LinearVelocity,
@@ -148,9 +154,11 @@ fn apply_character_action(
     let required_acceleration =
         (new_ground_linear_velocity - ground_linear_velocity) / time.delta_secs();
 
-    character
-        .external_force
-        .apply_force(required_acceleration * character.mass.value());
+    if required_acceleration.length_squared() >= f32::EPSILON {
+        character
+            .external_force
+            .apply_force(required_acceleration * character.mass.value());
+    }
 
     // // Handle jumping.
     // if input.jump {
@@ -180,4 +188,39 @@ fn apply_character_action(
     //             .apply_impulse(Vec3::new(0.0, 5.0, 0.0));
     //     }
     // }
+}
+
+#[cfg(feature = "debug")]
+mod debug {
+    use super::*;
+
+    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+    pub struct PlayerDebugPluginSet;
+
+    pub struct PlayerDebugPlugin;
+    impl Plugin for PlayerDebugPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_systems(
+                Update,
+                log_player_character_state.in_set(PlayerDebugPluginSet),
+            );
+        }
+    }
+
+    fn log_player_character_state(
+        q_player: Query<CharacterQuery, With<PlayerCharacterController>>,
+    ) {
+        for character in &q_player {
+            trace!(
+                "PlayerCharacter {:?}: ExternalForce={:?}, ExternalImpulse={:?}, LinearVelocity={:?}, Mass={:?}, Position={:?}, Rotation={:?}",
+                character.entity,
+                character.external_force,
+                character.external_impulse,
+                character.linear_velocity,
+                character.mass,
+                character.position,
+                character.rotation,
+            );
+        }
+    }
 }
