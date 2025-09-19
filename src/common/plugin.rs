@@ -123,6 +123,9 @@ impl Plugin for LauncherPlugin {
         app.add_plugins(
             PhysicsPlugins::default()
                 .build()
+                // disable Sync as it is handled by lightyear_avian
+                .disable::<SyncPlugin>()
+                // interpolation is handled by lightyear_frame_interpolation
                 .disable::<PhysicsInterpolationPlugin>()
                 // disable Sleeping plugin as it can mess up physics rollbacks
                 .disable::<SleepingPlugin>(),

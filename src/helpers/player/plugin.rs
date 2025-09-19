@@ -118,8 +118,10 @@ fn apply_character_action(
     // === ROTATION ===
     // Rotate player around Y axis by look.x (yaw)
     let yaw_delta = -input.look.x * LOOK_SENSITIVITY;
-    let yaw_rotation = Quat::from_rotation_y(yaw_delta);
-    character.rotation.0 = yaw_rotation * character.rotation.0;
+    if yaw_delta.abs() > f32::EPSILON {
+        let yaw_rotation = Quat::from_rotation_y(yaw_delta);
+        character.rotation.0 = yaw_rotation * character.rotation.0;
+    }
 
     // === MOVEMENT ===
     let move_input = input.move_axis.clamp_length_max(1.0);

@@ -200,11 +200,11 @@ pub fn get_client_id() -> u64 {
 }
 
 fn position_should_rollback(this: &Position, that: &Position) -> bool {
-    (this.0 - that.0).length() >= 0.01
+    (this.0 - that.0).length() >= f32::EPSILON
 }
 
 fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
-    this.angle_between(that.0) >= 0.01
+    this.angle_between(that.0) >= f32::EPSILON
 }
 
 fn on_server_welcome(
