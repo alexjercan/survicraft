@@ -24,6 +24,7 @@ fn handle_chat_submit(
 ) {
     for ev in ev_submitted.read() {
         let msg = ev.message.trim();
+        debug!("Player submitted chat message: {}", msg);
 
         if !msg.is_empty() {
             sender.send::<MessageChannel>(ClientChatMessage {
@@ -34,20 +35,22 @@ fn handle_chat_submit(
 }
 
 fn on_chat_message(
-    mut receiver: Single<&mut MessageReceiver<ServerChatMessage>>,
+    mut ev_chat: EventReader<ServerChatMessageEvent>,
     q_players: Query<(&PlayerName, &PlayerId), With<Replicated>>,
-    mut ev_chat: EventWriter<AddChatHistoryItemEvent>,
+    mut ev_history: EventWriter<AddChatHistoryItemEvent>,
 ) {
-    for message in receiver.receive() {
-        if let Some((name, _)) = q_players.iter().find(|(_, id)| id.0 == message.sender) {
-            ev_chat.write(AddChatHistoryItemEvent {
+    for ev in ev_chat.read() {
+        if let Some((name, _)) = q_players.iter().find(|(_, id)| id.0 == ev.sender) {
+            debug!("Received chat message from {}: {}", name.0, ev.message);
+
+            ev_history.write(AddChatHistoryItemEvent {
                 sender: name.0.clone(),
-                message: message.message.clone(),
+                message: ev.message.clone(),
             });
         } else {
             warn!(
                 "Received chat message from unknown player ID {:?}",
-                message.sender
+                ev.sender
             );
         }
     }

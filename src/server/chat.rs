@@ -15,24 +15,16 @@ impl Plugin for ChatPlugin {
 
 fn on_chat_message(
     mut q_receiver: Query<(&RemoteId, &mut MessageReceiver<ClientChatMessage>)>,
-    mut sender: ServerMultiMessageSender,
-    server: Single<&Server>,
+    mut ev_chat: EventWriter<ServerChatMessageEvent>,
 ) {
     for (RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
         for message in receiver.receive() {
-            sender
-                .send::<_, MessageChannel>(
-                    &ServerChatMessage {
-                        sender: *peer,
-                        message: message.message.clone(),
-                    },
-                    server.clone(),
-                    &NetworkTarget::All,
-                )
-                .unwrap_or_else(|e| {
-                    // TODO: Handle the error properly
-                    error!("Failed to send message: {:?}", e);
-                });
+            debug!("Received chat message from {:?}: {}", peer, message.message);
+
+            ev_chat.write(ServerChatMessageEvent {
+                sender: *peer,
+                message: message.message.clone(),
+            });
         }
     }
 }

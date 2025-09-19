@@ -55,6 +55,7 @@ fn on_new_client(
     _server: Single<&Server>,
 ) {
     info!("New client connected: {:?}", trigger.target());
+
     commands
         .entity(trigger.target())
         .insert(Name::new("Client"))
@@ -68,8 +69,8 @@ fn on_new_client(
 fn on_new_connection(
     trigger: Trigger<OnAdd, Connected>,
     q_connected: Query<&RemoteId, With<ClientOf>>,
-    mut sender: ServerMultiMessageSender,
-    server: Single<&Server>,
+    mut ev_welcome: EventWriter<ServerWelcomeEvent>,
+    _: Single<&Server>,
 ) -> Result {
     info!("New connection established: {:?}", trigger.target());
 
@@ -77,11 +78,7 @@ fn on_new_connection(
     let RemoteId(peer) = q_connected.get(entity)?;
     debug!("Sending welcome message to {:?}", peer);
 
-    sender.send::<_, MessageChannel>(
-        &ServerWelcomeMessage,
-        server.clone(),
-        &NetworkTarget::Single(*peer),
-    )?;
+    ev_welcome.write(ServerWelcomeEvent(*peer));
 
     Ok(())
 }

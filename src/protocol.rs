@@ -1,6 +1,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
+use lightyear::connection::host::HostClient;
 use lightyear::input::{config::InputConfig, leafwing::prelude::*};
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -52,6 +53,9 @@ pub struct PlayerCharacter;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ServerWelcomeMessage;
 
+#[derive(Debug, Clone, Event, Deref, DerefMut)]
+pub struct ServerWelcomeEvent(pub PeerId);
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientMetaMessage {
     pub username: String,
@@ -69,6 +73,12 @@ pub struct ClientChatMessage {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ServerChatMessage {
     // NOTE: we probably want to add some metadata like sender id, timestamp, etc.
+    pub sender: PeerId,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Event)]
+pub struct ServerChatMessageEvent {
     pub sender: PeerId,
     pub message: String,
 }
@@ -154,20 +164,31 @@ impl Plugin for ProtocolPlugin {
         // Messages and channels
         app.add_message::<ServerWelcomeMessage>()
             .add_direction(NetworkDirection::ServerToClient);
+        app.add_event::<ServerWelcomeEvent>();
+
         app.add_message::<ClientMetaMessage>()
             .add_direction(NetworkDirection::ClientToServer);
         app.add_message::<ClientSpawnRequest>()
             .add_direction(NetworkDirection::ClientToServer);
         app.add_message::<ClientChatMessage>()
             .add_direction(NetworkDirection::ClientToServer);
+
         app.add_message::<ServerChatMessage>()
             .add_direction(NetworkDirection::ServerToClient);
+        app.add_event::<ServerChatMessageEvent>();
 
         app.add_channel::<MessageChannel>(ChannelSettings {
             mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
             ..default()
         })
         .add_direction(NetworkDirection::Bidirectional);
+
+        // Systems
+        app.add_systems(FixedUpdate, on_server_welcome);
+        app.add_systems(FixedUpdate, on_client_welcome);
+
+        app.add_systems(FixedUpdate, on_server_chat_message);
+        app.add_systems(FixedUpdate, on_client_chat_message);
     }
 }
 
@@ -186,3 +207,66 @@ fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
     this.angle_between(that.0) >= 0.01
 }
 
+fn on_server_welcome(
+    mut ev_welcome: EventReader<ServerWelcomeEvent>,
+    mut sender: ServerMultiMessageSender,
+    server: Single<&Server>,
+) -> Result {
+    for ev in ev_welcome.read() {
+        let peer = **ev;
+        sender.send::<_, MessageChannel>(
+            &ServerWelcomeMessage,
+            server.clone(),
+            &NetworkTarget::Single(peer),
+        )?;
+    }
+
+    Ok(())
+}
+
+fn on_client_welcome(
+    receiver: Single<
+        (&RemoteId, &mut MessageReceiver<ServerWelcomeMessage>),
+        Or<(With<Client>, With<HostClient>)>,
+    >,
+    mut ev_welcome: EventWriter<ServerWelcomeEvent>,
+) {
+    let (RemoteId(peer), mut receiver) = receiver.into_inner();
+
+    for _ in receiver.receive() {
+        ev_welcome.write(ServerWelcomeEvent(*peer));
+    }
+}
+
+fn on_server_chat_message(
+    mut ev_chat: EventReader<ServerChatMessageEvent>,
+    mut sender: ServerMultiMessageSender,
+    server: Single<&Server>,
+) -> Result {
+    for ev in ev_chat.read() {
+        sender.send::<_, MessageChannel>(
+            &ServerChatMessage {
+                sender: ev.sender,
+                message: ev.message.clone(),
+            },
+            server.clone(),
+            &NetworkTarget::All,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn on_client_chat_message(
+    mut q_receiver: Query<&mut MessageReceiver<ServerChatMessage>>,
+    mut ev_chat: EventWriter<ServerChatMessageEvent>,
+) {
+    for mut receiver in q_receiver.iter_mut() {
+        for message in receiver.receive() {
+            ev_chat.write(ServerChatMessageEvent {
+                sender: message.sender.clone(),
+                message: message.message.clone(),
+            });
+        }
+    }
+}

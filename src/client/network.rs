@@ -4,7 +4,6 @@
 use crate::protocol::prelude::*;
 use bevy::prelude::*;
 use lightyear::{
-    connection::host::HostClient,
     netcode::{Key, NetcodeClient},
     prelude::{client::NetcodeConfig, *},
 };
@@ -12,21 +11,21 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 /// Structure representing a request to connect to a server.
 /// To connect to the server, add this component to an entity.
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, Reflect)]
 pub struct ClientConnection {
     pub address: SocketAddr,
 }
 
 /// Structure representing a request to connect to the host server.
 /// To connect to the host server, add this component to an entity.
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, Reflect)]
 pub struct HostConnection {
     pub server: Entity,
 }
 
 /// Component to store client metadata such as username.
 /// This is used to add metadata to the client upon connection.
-#[derive(Debug, Clone, Component)]
+#[derive(Debug, Clone, Component, Reflect)]
 pub struct ClientMetadata {
     pub username: String,
 }
@@ -38,6 +37,10 @@ pub(crate) struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<ClientConnection>()
+            .register_type::<HostConnection>()
+            .register_type::<ClientMetadata>();
+
         app.add_observer(on_client_connection_added);
         app.add_observer(on_host_connection_added);
         app.add_systems(FixedUpdate, on_welcome_message.in_set(NetworkPluginSet));
@@ -102,8 +105,6 @@ fn on_host_connection_added(
             LinkOf {
                 server: connection.server,
             },
-            LocalAddr(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)),
-            UdpIo::default(),
         ))
         .id();
 
@@ -113,16 +114,19 @@ fn on_host_connection_added(
 }
 
 fn on_welcome_message(
-    mut receiver: Single<
-        &mut MessageReceiver<ServerWelcomeMessage>,
-        Or<(With<Client>, With<HostClient>)>,
-    >,
-    mut sender: Single<&mut MessageSender<ClientMetaMessage>>,
+    mut ev_welcome: EventReader<ServerWelcomeEvent>,
+    sender: Single<(&RemoteId, &mut MessageSender<ClientMetaMessage>)>,
     mut sender_spawn: Single<&mut MessageSender<ClientSpawnRequest>>,
     metadata: Single<&ClientMetadata>,
 ) {
-    for message in receiver.receive() {
-        debug!("Received welcome message from server: {:?}", message);
+    let (RemoteId(local), mut sender) = sender.into_inner();
+    for ev in ev_welcome.read() {
+        let peer = **ev;
+        if *local != peer {
+            continue;
+        }
+
+        debug!("Received welcome message from server: {:?}", peer);
 
         debug!("Sending client metadata: {:?}", metadata.username);
         sender.send::<MessageChannel>(ClientMetaMessage {
