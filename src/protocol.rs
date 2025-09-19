@@ -1,3 +1,4 @@
+use avian3d::position::{PreSolveAccumulatedTranslation, PreSolveRotation, PreviousRotation};
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -94,7 +95,6 @@ impl Plugin for ProtocolPlugin {
         // Input handling
         app.add_plugins(InputPlugin::<CharacterAction> {
             config: InputConfig::<CharacterAction> {
-                // NOTE: for some reason rebroadcast also broadcasts to the same client, that sucks
                 rebroadcast_inputs: true,
                 ..default()
             },
@@ -136,10 +136,37 @@ impl Plugin for ProtocolPlugin {
         app.register_component::<ExternalForce>()
             .add_prediction(PredictionMode::Full);
 
+        app.register_component::<ExternalTorque>()
+            .add_prediction(PredictionMode::Full);
+
         app.register_component::<ExternalImpulse>()
             .add_prediction(PredictionMode::Full);
 
+        app.register_component::<ExternalAngularImpulse>()
+            .add_prediction(PredictionMode::Full);
+
         app.register_component::<ComputedMass>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<ComputedAngularInertia>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<ComputedCenterOfMass>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<AccumulatedTranslation>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<PreSolveAccumulatedTranslation>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<PreSolveRotation>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<PreviousRotation>()
+            .add_prediction(PredictionMode::Full);
+
+        app.register_component::<Friction>()
             .add_prediction(PredictionMode::Full);
 
         // Position and Rotation have a `correction_fn` set, which is used to smear rollback errors

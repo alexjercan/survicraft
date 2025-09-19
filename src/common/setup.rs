@@ -13,7 +13,7 @@ use bevy::{
 use crate::prelude::FIXED_TIMESTEP_HZ;
 
 #[cfg(feature = "debug")]
-use self::debug::DebugPlugin;
+use self::debug::{InpsectorDebugPlugin, LoggingDebugPlugin};
 
 fn window_plugin() -> WindowPlugin {
     WindowPlugin {
@@ -51,7 +51,7 @@ pub fn new_gui_app() -> App {
     );
 
     #[cfg(feature = "debug")]
-    app.add_plugins(DebugPlugin);
+    app.add_plugins((InpsectorDebugPlugin, LoggingDebugPlugin));
 
     app
 }
@@ -69,24 +69,32 @@ pub fn new_headless_app() -> App {
             .disable::<WinitPlugin>(),
         ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ)),
     ));
+
+    #[cfg(feature = "debug")]
+    app.add_plugins(LoggingDebugPlugin);
+
     app
 }
 
 #[cfg(feature = "debug")]
 mod debug {
+    use crate::prelude::*;
+    use avian3d::prelude::*;
     use bevy::{prelude::*, render::view::RenderLayers};
     use bevy_inspector_egui::{
         bevy_egui::{EguiContext, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext},
         bevy_inspector, egui, DefaultInspectorConfigPlugin,
     };
     use iyes_perf_ui::prelude::*;
+    use leafwing_input_manager::prelude::*;
+    use lightyear::{frame_interpolation::FrameInterpolate, prelude::{input::InputBuffer, server::ClientOf, *}};
 
     #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct DebugPluginSet;
+    pub struct InspectorDebugPluginSet;
 
-    pub struct DebugPlugin;
+    pub struct InpsectorDebugPlugin;
 
-    impl Plugin for DebugPlugin {
+    impl Plugin for InpsectorDebugPlugin {
         fn build(&self, app: &mut App) {
             app
                 // we want Bevy to measure these values for us:
@@ -106,9 +114,12 @@ mod debug {
                     Update,
                     toggle
                         .before(iyes_perf_ui::PerfUiSet::Setup)
-                        .in_set(DebugPluginSet),
+                        .in_set(InspectorDebugPluginSet),
                 )
-                .add_systems(Update, setup.in_set(DebugPluginSet).run_if(run_once));
+                .add_systems(
+                    Update,
+                    setup.in_set(InspectorDebugPluginSet).run_if(run_once),
+                );
         }
     }
 
@@ -175,5 +186,77 @@ mod debug {
                 // bevy_inspector::ui_for_entities(world, ui);
             });
         });
+    }
+
+    pub struct LoggingDebugPlugin;
+
+    impl Plugin for LoggingDebugPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_systems(Last, last_log);
+            app.add_systems(FixedLast, fixed_last_log);
+        }
+    }
+
+    pub(crate) fn fixed_last_log(
+        timeline: Single<(&LocalTimeline, Has<Rollback>), Or<(With<Client>, Without<ClientOf>)>>,
+        players: Query<
+            (
+                Entity,
+                &Position,
+                Option<&VisualCorrection<Position>>,
+                Option<&ActionState<CharacterAction>>,
+                Option<&InputBuffer<ActionState<CharacterAction>>>,
+            ),
+            (With<PlayerCharacter>, Without<Confirmed>),
+        >,
+    ) {
+        let (timeline, rollback) = timeline.into_inner();
+        let tick = timeline.tick();
+
+        for (entity, position, correction, action_state, input_buffer) in players.iter() {
+            let pressed = action_state.map(|a| a.axis_pair(&CharacterAction::Move));
+            let last_buffer_tick =
+                input_buffer.and_then(|b| b.get_last_with_tick().map(|(t, _)| t));
+            info!(
+                ?rollback,
+                ?tick,
+                ?entity,
+                ?position,
+                ?correction,
+                ?pressed,
+                ?last_buffer_tick,
+                "Player - FixedLast"
+            );
+        }
+    }
+
+    pub(crate) fn last_log(
+        timeline: Single<(&LocalTimeline, Has<Rollback>), Or<(With<Client>, Without<ClientOf>)>>,
+        players: Query<
+            (
+                Entity,
+                &Position,
+                &Transform,
+                Option<&FrameInterpolate<Position>>,
+                Option<&VisualCorrection<Position>>,
+            ),
+            (With<PlayerCharacter>, Without<Confirmed>),
+        >,
+    ) {
+        let (timeline, rollback) = timeline.into_inner();
+        let tick = timeline.tick();
+
+        for (entity, position, transform, interpolate, correction) in players.iter() {
+            info!(
+                ?rollback,
+                ?tick,
+                ?entity,
+                ?position,
+                ?transform,
+                ?interpolate,
+                ?correction,
+                "Player - Last"
+            );
+        }
     }
 }
