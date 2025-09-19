@@ -1,8 +1,16 @@
 //! This module contains functions to create new Bevy apps with different configurations.
 
+use std::time::Duration;
+
 use bevy::{
-    diagnostic::DiagnosticsPlugin, log::{Level, LogPlugin}, prelude::*, render::mesh::MeshPlugin, state::app::StatesPlugin, window::PresentMode
+    app::ScheduleRunnerPlugin,
+    log::{Level, LogPlugin},
+    prelude::*,
+    window::PresentMode,
+    winit::WinitPlugin,
 };
+
+use crate::prelude::FIXED_TIMESTEP_HZ;
 
 #[cfg(feature = "debug")]
 use self::debug::DebugPlugin;
@@ -51,15 +59,15 @@ pub fn new_gui_app() -> App {
 pub fn new_headless_app() -> App {
     let mut app = App::new();
     app.add_plugins((
-        MinimalPlugins,
-        log_plugin(),
-        StatesPlugin,
-        DiagnosticsPlugin,
-        AssetPlugin {
-            meta_check: bevy::asset::AssetMetaCheck::Never,
-            ..default()
-        },
-        MeshPlugin,
+        DefaultPlugins
+            .build()
+            .set(AssetPlugin {
+                meta_check: bevy::asset::AssetMetaCheck::Never,
+                ..default()
+            })
+            .set(log_plugin())
+            .disable::<WinitPlugin>(),
+        ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ)),
     ));
     app
 }
