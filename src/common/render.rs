@@ -2,9 +2,9 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use lightyear::{frame_interpolation::{FrameInterpolate, FrameInterpolationPlugin}, prelude::*};
 
-pub struct ExampleRendererPlugin;
+pub struct CommonRendererPlugin;
 
-impl Plugin for ExampleRendererPlugin {
+impl Plugin for CommonRendererPlugin {
     fn build(&self, app: &mut App) {
         // Set up visual interp plugins for Position/Rotation. Position/Rotation is updated in FixedUpdate
         // by the physics plugin so we make sure that in PostUpdate we interpolate it

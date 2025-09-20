@@ -135,6 +135,8 @@ impl Plugin for LauncherPlugin {
         app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
         app.add_plugins(PlayerControllerPlugin);
 
+        app.add_plugins(CommonRendererPlugin);
+
         // --- Client and Server plugins below here ---
 
         app.add_plugins(ServerPlugin);
