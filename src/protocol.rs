@@ -125,6 +125,10 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
+        app.register_component::<RigidBody>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
         // Fully replicated, but not visual, so no need for lerp/corrections:
         app.register_component::<LinearVelocity>()
             .add_prediction(PredictionMode::Full);
@@ -145,27 +149,6 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(PredictionMode::Full);
 
         app.register_component::<ComputedMass>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<ComputedAngularInertia>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<ComputedCenterOfMass>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<AccumulatedTranslation>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<PreSolveAccumulatedTranslation>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<PreSolveRotation>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<PreviousRotation>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<Friction>()
             .add_prediction(PredictionMode::Full);
 
         // Position and Rotation have a `correction_fn` set, which is used to smear rollback errors
@@ -238,7 +221,7 @@ fn position_should_rollback(this: &Position, that: &Position) -> bool {
 }
 
 fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
-    this.angle_between(that.0) >= 0.1
+    this.angle_between(that.0) >= 2.0_f32.to_radians()
 }
 
 fn on_server_welcome(

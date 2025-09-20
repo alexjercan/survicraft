@@ -34,6 +34,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, handle_spawn_player);
+        app.add_systems(Update, handle_player_rotation);
         app.add_systems(FixedUpdate, handle_character_actions);
 
         #[cfg(feature = "debug")]
@@ -55,13 +56,28 @@ fn handle_spawn_player(
     }
 }
 
+fn handle_player_rotation(
+    mut q_player: Query<(&PlayerCharacterInput, &mut Rotation), With<PlayerCharacterController>>,
+) {
+    // TODO: unhardcode these values
+    const LOOK_SENSITIVITY: f32 = 0.0025;
+
+    for (input, mut rotation) in &mut q_player {
+        let yaw_delta = -input.look.x * LOOK_SENSITIVITY;
+        if yaw_delta.abs() > f32::EPSILON {
+            let yaw_rotation = Quat::from_rotation_y(yaw_delta);
+            rotation.0 = yaw_rotation * rotation.0;
+        }
+    }
+}
+
 fn handle_character_actions(
     time: Res<Time>,
-    // spatial_query: SpatialQuery,
+    spatial_query: SpatialQuery,
     mut q_player: Query<(&PlayerCharacterInput, CharacterQuery), With<PlayerCharacterController>>,
 ) {
     for (input, mut character) in &mut q_player {
-        apply_character_action(&time, /*&spatial_query,*/ input, &mut character);
+        apply_character_action(&time, &spatial_query, input, &mut character);
     }
 }
 
@@ -99,29 +115,21 @@ pub(super) struct CharacterQuery {
     linear_velocity: &'static LinearVelocity,
     mass: &'static ComputedMass,
     position: &'static Position,
-    rotation: &'static mut Rotation,
+    rotation: &'static Rotation,
     entity: Entity,
 }
 
 /// Apply the character actions `action_state` to the character entity `character`.
 fn apply_character_action(
     time: &Res<Time>,
-    // spatial_query: &SpatialQuery,
+    spatial_query: &SpatialQuery,
     input: &PlayerCharacterInput,
     character: &mut CharacterQueryItem,
 ) {
     // TODO: unhardcode these values
     const MAX_SPEED: f32 = 5.0;
     const MAX_ACCELERATION: f32 = 20.0;
-    const LOOK_SENSITIVITY: f32 = 0.0025;
-
-    // === ROTATION ===
-    // Rotate player around Y axis by look.x (yaw)
-    let yaw_delta = -input.look.x * LOOK_SENSITIVITY;
-    if yaw_delta.abs() > f32::EPSILON {
-        let yaw_rotation = Quat::from_rotation_y(yaw_delta);
-        character.rotation.0 = yaw_rotation * character.rotation.0;
-    }
+    const JUMP_FORCE: f32 = 5.0;
 
     // === MOVEMENT ===
     let move_input = input.move_axis.clamp_length_max(1.0);
@@ -154,34 +162,34 @@ fn apply_character_action(
             .apply_force(required_acceleration * character.mass.value());
     }
 
-    // // Handle jumping.
-    // if input.jump {
-    //     let ray_cast_origin = character.position.0
-    //         + Vec3::new(
-    //             0.0,
-    //             -CHARACTER_CAPSULE_HEIGHT / 2.0 - CHARACTER_CAPSULE_RADIUS,
-    //             0.0,
-    //         );
+    // Handle jumping.
+    if input.jump {
+        let ray_cast_origin = character.position.0
+            + Vec3::new(
+                0.0,
+                -CHARACTER_CAPSULE_HEIGHT / 2.0 - CHARACTER_CAPSULE_RADIUS,
+                0.0,
+            );
 
-    //     // Only jump if the character is on the ground.
-    //     //
-    //     // Check if we are touching the ground by sending a ray from the bottom
-    //     // of the character downwards.
-    //     if spatial_query
-    //         .cast_ray(
-    //             ray_cast_origin,
-    //             Dir3::NEG_Y,
-    //             0.01,
-    //             true,
-    //             &SpatialQueryFilter::from_excluded_entities([character.entity]),
-    //         )
-    //         .is_some()
-    //     {
-    //         character
-    //             .external_impulse
-    //             .apply_impulse(Vec3::new(0.0, 5.0, 0.0));
-    //     }
-    // }
+        // Only jump if the character is on the ground.
+        //
+        // Check if we are touching the ground by sending a ray from the bottom
+        // of the character downwards.
+        if spatial_query
+            .cast_ray(
+                ray_cast_origin,
+                Dir3::NEG_Y,
+                0.1,
+                true,
+                &SpatialQueryFilter::from_excluded_entities([character.entity]),
+            )
+            .is_some()
+        {
+            character
+                .external_impulse
+                .apply_impulse(Vec3::new(0.0, JUMP_FORCE, 0.0));
+        }
+    }
 }
 
 #[cfg(feature = "debug")]
