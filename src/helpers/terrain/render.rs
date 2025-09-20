@@ -14,9 +14,6 @@ use bevy::{
 #[cfg(feature = "debug")]
 use self::debug::*;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TerrainRenderPluginSet;
-
 pub struct TerrainRenderPlugin {
     tile_size: Vec2,
     chunk_radius: u32,
@@ -46,17 +43,12 @@ impl Plugin for TerrainRenderPlugin {
 
         #[cfg(feature = "debug")]
         app.add_plugins(DebugPlugin);
-        #[cfg(feature = "debug")]
-        app.configure_sets(Update, DebugPluginSet.in_set(TerrainRenderPluginSet));
 
         app.insert_resource(RenderSettings::new(self.tile_size, self.chunk_radius))
             .add_plugins(MaterialPlugin::<
                 ExtendedMaterial<StandardMaterial, ChunkMaterial>,
             >::default())
-            .add_systems(
-                Update,
-                (generate_chunk_render).in_set(TerrainRenderPluginSet),
-            );
+            .add_systems(Update, generate_chunk_render);
     }
 }
 
@@ -92,7 +84,7 @@ fn generate_chunk_render(
     if q_meshes.is_empty() {
         return;
     }
-    debug!(
+    trace!(
         "Generating render data for {} chunk meshes",
         q_meshes.iter().len()
     );
@@ -156,9 +148,6 @@ mod debug {
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
     struct ShowGrid(pub bool);
 
-    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct DebugPluginSet;
-
     pub struct DebugPlugin;
 
     impl Plugin for DebugPlugin {
@@ -169,10 +158,7 @@ mod debug {
                     default_color: Color::WHITE,
                 });
             app.insert_resource(ShowGrid(true));
-            app.add_systems(
-                Update,
-                (toggle, draw_grid, undraw_grid).in_set(DebugPluginSet),
-            );
+            app.add_systems(Update, (toggle, draw_grid, undraw_grid));
         }
     }
 

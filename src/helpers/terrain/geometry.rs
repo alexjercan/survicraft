@@ -10,9 +10,6 @@ use bevy::{
 };
 use itertools::Itertools;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TerrainGeometryPluginSet;
-
 pub struct TerrainGeometryPlugin {
     tile_size: Vec2,
     max_height: f64,
@@ -33,7 +30,7 @@ impl Plugin for TerrainGeometryPlugin {
             .register_type::<GeometrySettings>();
 
         app.insert_resource(GeometrySettings::new(self.tile_size, self.max_height))
-            .add_systems(Update, generate_chunk_mesh.in_set(TerrainGeometryPluginSet));
+            .add_systems(Update, generate_chunk_mesh);
     }
 }
 
@@ -217,7 +214,7 @@ fn generate_chunk_mesh(
     if q_tiles.is_empty() {
         return;
     }
-    debug!("Generating geometry for {} tiles", q_tiles.iter().len());
+    trace!("Generating geometry for {} tiles", q_tiles.iter().len());
 
     for (chunk_entity, chunk) in q_tiles
         .iter()

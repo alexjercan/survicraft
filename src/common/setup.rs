@@ -92,9 +92,6 @@ mod debug {
         prelude::{input::InputBuffer, server::ClientOf, *},
     };
 
-    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct InspectorDebugPluginSet;
-
     pub struct InpsectorDebugPlugin;
 
     impl Plugin for InpsectorDebugPlugin {
@@ -113,16 +110,8 @@ mod debug {
                 // We need to order our system before PerfUiSet::Setup,
                 // so that iyes_perf_ui can process any new Perf UI in the same
                 // frame as we spawn the entities. Otherwise, Bevy UI will complain.
-                .add_systems(
-                    Update,
-                    toggle
-                        .before(iyes_perf_ui::PerfUiSet::Setup)
-                        .in_set(InspectorDebugPluginSet),
-                )
-                .add_systems(
-                    Update,
-                    setup.in_set(InspectorDebugPluginSet).run_if(run_once),
-                );
+                .add_systems(Update, toggle.before(iyes_perf_ui::PerfUiSet::Setup))
+                .add_systems(Startup, setup);
         }
     }
 

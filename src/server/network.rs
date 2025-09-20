@@ -1,6 +1,6 @@
 //! The network plugin handles the server listener
 
-use crate::protocol::prelude::*;
+use crate::{helpers::prelude::*, protocol::prelude::*};
 use bevy::prelude::*;
 use lightyear::{
     netcode::NetcodeServer,
@@ -15,9 +15,6 @@ use lightyear::{
 #[derive(Debug, Clone, Component)]
 pub struct ServerListener;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct NetworkPluginSet;
-
 pub(crate) struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
@@ -26,10 +23,7 @@ impl Plugin for NetworkPlugin {
         app.add_observer(on_new_client);
         app.add_observer(on_new_connection);
 
-        app.add_systems(
-            FixedUpdate,
-            on_client_metadata_message.in_set(NetworkPluginSet),
-        );
+        app.add_systems(FixedUpdate, on_client_metadata_message);
     }
 }
 
@@ -70,15 +64,17 @@ fn on_new_connection(
     trigger: Trigger<OnAdd, Connected>,
     q_connected: Query<&RemoteId, With<ClientOf>>,
     mut ev_welcome: EventWriter<ServerWelcomeEvent>,
+    world_seed: Res<TerrainGenerationSeed>,
     _: Single<&Server>,
 ) -> Result {
     info!("New connection established: {:?}", trigger.target());
 
     let entity = trigger.target();
     let RemoteId(peer) = q_connected.get(entity)?;
-    debug!("Sending welcome message to {:?}", peer);
+    let welcome = ServerWelcomeEvent { peer: *peer, seed: **world_seed };
+    debug!("Sending welcome message to {:?}: {:?}", peer, welcome);
 
-    ev_welcome.write(ServerWelcomeEvent(*peer));
+    ev_welcome.write(welcome);
 
     Ok(())
 }
@@ -94,8 +90,9 @@ fn on_client_metadata_message(
             commands.spawn((
                 Name::new("PlayerMetadata"),
                 PlayerId(*peer),
-                PlayerName(message.username.clone()),
-                PlayerMetadata,
+                PlayerMetadata {
+                    username: message.username.clone(),
+                },
                 Replicate::to_clients(NetworkTarget::All),
             ));
         }

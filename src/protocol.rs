@@ -41,10 +41,9 @@ pub enum CharacterAction {
 pub struct PlayerId(pub PeerId);
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-pub struct PlayerName(pub String);
-
-#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-pub struct PlayerMetadata;
+pub struct PlayerMetadata {
+    pub username: String,
+}
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
 pub struct PlayerCharacter;
@@ -52,10 +51,15 @@ pub struct PlayerCharacter;
 // --- Messages ---
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct ServerWelcomeMessage;
+pub struct ServerWelcomeMessage {
+    pub seed: u32,
+}
 
-#[derive(Debug, Clone, Event, Deref, DerefMut)]
-pub struct ServerWelcomeEvent(pub PeerId);
+#[derive(Debug, Clone, Event)]
+pub struct ServerWelcomeEvent {
+    pub peer: PeerId,
+    pub seed: u32,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientMetaMessage {
@@ -102,7 +106,6 @@ impl Plugin for ProtocolPlugin {
 
         // Components for player
         app.register_type::<PlayerId>()
-            .register_type::<PlayerName>()
             .register_type::<PlayerCharacter>()
             .register_type::<PlayerMetadata>();
 
@@ -111,10 +114,6 @@ impl Plugin for ProtocolPlugin {
             .add_interpolation(InterpolationMode::Once);
 
         app.register_component::<PlayerId>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
-        app.register_component::<PlayerName>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
@@ -247,10 +246,9 @@ fn on_server_welcome(
     mut sender: ServerMultiMessageSender,
     server: Single<&Server>,
 ) -> Result {
-    for ev in ev_welcome.read() {
-        let peer = **ev;
+    for &ServerWelcomeEvent { peer, seed } in ev_welcome.read() {
         sender.send::<_, MessageChannel>(
-            &ServerWelcomeMessage,
+            &ServerWelcomeMessage { seed },
             server.clone(),
             &NetworkTarget::Single(peer),
         )?;
@@ -268,8 +266,8 @@ fn on_client_welcome(
 ) {
     let (RemoteId(peer), mut receiver) = receiver.into_inner();
 
-    for _ in receiver.receive() {
-        ev_welcome.write(ServerWelcomeEvent(*peer));
+    for ServerWelcomeMessage { seed } in receiver.receive() {
+        ev_welcome.write(ServerWelcomeEvent { peer: *peer, seed });
     }
 }
 

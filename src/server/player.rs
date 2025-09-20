@@ -6,14 +6,11 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::prelude::*;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct PlayerPluginSet;
-
 pub(crate) struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, handle_spawn_player.in_set(PlayerPluginSet));
+        app.add_systems(FixedUpdate, handle_spawn_player);
     }
 }
 

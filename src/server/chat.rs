@@ -2,14 +2,11 @@ use crate::protocol::prelude::*;
 use bevy::prelude::*;
 use lightyear::prelude::*;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct ChatPluginSet;
-
 pub(crate) struct ChatPlugin;
 
 impl Plugin for ChatPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, on_chat_message.in_set(ChatPluginSet));
+        app.add_systems(FixedUpdate, on_chat_message);
     }
 }
 

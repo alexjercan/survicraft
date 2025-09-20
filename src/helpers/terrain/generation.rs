@@ -20,9 +20,6 @@ impl Default for TerrainGenerationSeed {
     }
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TerrainGenerationPluginSet;
-
 pub struct TerrainGenerationPlugin {
     tile_size: Vec2,
     chunk_radius: u32,
@@ -54,21 +51,15 @@ impl Plugin for TerrainGenerationPlugin {
         .add_plugins(ChunkMapPlugin::<TileCoord, TileNoiseHeight, _>::new(
             PlanetHeight::default(),
         ))
-        .configure_sets(Update, TileMapSet.in_set(TerrainGenerationPluginSet))
-        .configure_sets(Update, ChunkMapPluginSet.in_set(TerrainGenerationPluginSet))
-        .add_systems(Update, handle_chunk.in_set(TerrainGenerationPluginSet));
+        .add_systems(Update, handle_chunk);
 
         app.insert_resource(TerrainGenerationProgress::default());
-        app.add_systems(
-            Update,
-            handle_chunk_progress.in_set(TerrainGenerationPluginSet),
-        );
+        app.add_systems(Update, handle_chunk_progress);
 
         app.insert_resource(TerrainGenerationSeed::default());
         app.add_systems(
             Update,
-            update_terrain_seed
-                .run_if(resource_changed::<TerrainGenerationSeed>),
+            update_terrain_seed.run_if(resource_changed::<TerrainGenerationSeed>),
         );
     }
 }
@@ -81,7 +72,7 @@ fn handle_chunk(
     if q_tiles.is_empty() {
         return;
     }
-    debug!("Computing Tile kind for {} tiles", q_tiles.iter().len());
+    trace!("Computing Tile kind for {} tiles", q_tiles.iter().len());
 
     for (entity, height) in q_tiles {
         let height = **height;

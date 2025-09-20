@@ -11,23 +11,20 @@ mod planet;
 mod render;
 mod resources;
 
-use self::collider::{TerrainColliderPlugin, TerrainColliderPluginSet};
-use self::generation::{TerrainGenerationPlugin, TerrainGenerationPluginSet};
-use self::geometry::{TerrainGeometryPlugin, TerrainGeometryPluginSet};
+use self::collider::TerrainColliderPlugin;
+use self::generation::TerrainGenerationPlugin;
+use self::geometry::TerrainGeometryPlugin;
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::render::{TerrainRenderPlugin, TerrainRenderPluginSet};
+    pub use super::generation::{TerrainGenerationProgress, TerrainGenerationSeed};
+    pub use super::render::TerrainRenderPlugin;
     pub use super::resources::*;
-    pub use super::{TerrainPlugin, TerrainPluginSet};
-    pub use super::generation::{TerrainGenerationSeed, TerrainGenerationProgress};
+    pub use super::TerrainPlugin;
 }
 
 pub(crate) const TILE_SIZE: Vec2 = Vec2::splat(1.0);
 pub(crate) const CHUNK_RADIUS: u32 = 16;
-
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TerrainPluginSet;
 
 pub struct TerrainPlugin {
     tile_size: Vec2,
@@ -48,12 +45,7 @@ impl Default for TerrainPlugin {
 }
 
 impl TerrainPlugin {
-    pub fn new(
-        tile_size: Vec2,
-        chunk_radius: u32,
-        discover_radius: u32,
-        max_height: f64,
-    ) -> Self {
+    pub fn new(tile_size: Vec2, chunk_radius: u32, discover_radius: u32, max_height: f64) -> Self {
         Self {
             tile_size,
             chunk_radius,
@@ -70,11 +62,7 @@ impl Plugin for TerrainPlugin {
             self.chunk_radius,
             self.discover_radius,
         ));
-        app.configure_sets(Update, TerrainGenerationPluginSet.in_set(TerrainPluginSet));
         app.add_plugins(TerrainGeometryPlugin::new(self.tile_size, self.max_height));
-        app.configure_sets(Update, TerrainGeometryPluginSet.in_set(TerrainPluginSet));
-
         app.add_plugins(TerrainColliderPlugin);
-        app.configure_sets(Update, TerrainColliderPluginSet.in_set(TerrainPluginSet));
     }
 }

@@ -10,10 +10,7 @@ use bevy::{
 use bevy_asset_loader::prelude::*;
 use bevy_simple_text_input::TextInputPlugin;
 use iyes_progress::prelude::*;
-use lightyear::{
-    connection::identity::is_server,
-    prelude::{client::ClientPlugins, server::ServerPlugins},
-};
+use lightyear::prelude::{client::ClientPlugins, server::ServerPlugins};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     str::FromStr,
@@ -25,6 +22,7 @@ enum LauncherStates {
     #[default]
     Loading,
     MainMenu,
+    Connecting,
     Generating,
     Playing,
 }
@@ -75,23 +73,33 @@ impl Plugin for LauncherPlugin {
         // Main Menu setup and event handling for starting the game.
         app.add_systems(OnEnter(LauncherStates::MainMenu), setup_menu);
         app.add_plugins(MainMenuPlugin);
-        app.configure_sets(
-            Update,
-            MainMenuPluginSet.run_if(in_state(LauncherStates::MainMenu)),
-        );
         app.add_systems(
             Update,
             (handle_play_button_pressed, handle_multiplayer_pressed)
                 .run_if(in_state(LauncherStates::MainMenu)),
         );
 
-        // --- Playing related stuff below here ---
-
-        // Progress plugin to show progress while generating terrain.
         app.add_plugins(
             ProgressPlugin::<LauncherStates>::new()
+                .with_state_transition(LauncherStates::Connecting, LauncherStates::Generating)
                 .with_state_transition(LauncherStates::Generating, LauncherStates::Playing),
         );
+
+        // Create connections when entering the Connecting state.
+        app.add_systems(
+            OnEnter(LauncherStates::Connecting),
+            (setup_connecting_ui, setup_connections),
+        );
+        app.add_systems(
+            Update,
+            check_connection_progress
+                .track_progress::<LauncherStates>()
+                .run_if(in_state(LauncherStates::Connecting)),
+        );
+
+        // Terrain generation setup and progress tracking.
+        app.add_plugins(TerrainPlugin::default());
+        app.add_plugins(TerrainRenderPlugin::default());
         app.add_systems(
             OnEnter(LauncherStates::Generating),
             (setup_loading_ui, setup_terrain_generation),
@@ -101,22 +109,6 @@ impl Plugin for LauncherPlugin {
             check_terrain_generation_progress
                 .track_progress::<LauncherStates>()
                 .run_if(in_state(LauncherStates::Generating)),
-        );
-
-        app.add_systems(OnEnter(LauncherStates::Playing), setup_connections);
-
-        // Terrain setup. We set up terrain assets and the terrain plugin itself.
-        // This will run only in the Playing state.
-        app.add_plugins(TerrainPlugin::default());
-        app.configure_sets(
-            Update,
-            TerrainPluginSet
-                .run_if(in_state(LauncherStates::Generating).or(in_state(LauncherStates::Playing))),
-        );
-        app.add_plugins(TerrainRenderPlugin::default());
-        app.configure_sets(
-            Update,
-            TerrainRenderPluginSet.run_if(in_state(LauncherStates::Playing)),
         );
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
@@ -134,53 +126,19 @@ impl Plugin for LauncherPlugin {
         // Chat setup. We set up chat UI and related systems.
         app.add_systems(OnEnter(LauncherStates::Playing), setup_chat);
         app.add_plugins(ChatPlugin);
-        app.configure_sets(
-            Update,
-            ChatPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
 
         // Player setup. We set up player-related systems and the player plugin.
         app.add_plugins(PlayerPlugin);
-        app.configure_sets(
-            FixedUpdate,
-            PlayerPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
-        app.configure_sets(
-            Update,
-            PlayerPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
         app.add_plugins(PlayerRenderPlugin);
-        app.configure_sets(
-            Update,
-            PlayerRenderPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
 
         // The head camera controller will run only in the Playing state
         app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
         app.add_plugins(PlayerControllerPlugin);
-        app.configure_sets(
-            Update,
-            PlayerControllerPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
 
         // --- Client and Server plugins below here ---
 
-        // The server plugin will run only if we are the server (i.e. hosting)
-        // and in the Playing state
         app.add_plugins(ServerPlugin);
-        app.configure_sets(
-            FixedUpdate,
-            ServerPluginSet
-                .run_if(is_server.and(in_state(LauncherStates::Playing)))
-                .before(ClientPluginSet),
-        );
-
-        // The client plugin will run only in the Playing state
         app.add_plugins(ClientPlugin);
-        app.configure_sets(
-            FixedUpdate,
-            ClientPluginSet.run_if(in_state(LauncherStates::Playing)),
-        );
 
         // NOTE: Just for testing, lock cursor on left click and unlock on escape
         app.add_systems(
@@ -233,7 +191,7 @@ fn handle_play_button_pressed(
         // We spawn the ServerListener and ClientConnection entities here
         // to enable hosting mode.
 
-        next_state.set(LauncherStates::Generating);
+        next_state.set(LauncherStates::Connecting);
         *mode = LauncherMode::Host;
     }
 }
@@ -247,9 +205,51 @@ fn handle_multiplayer_pressed(
         // If the multiplayer button is pressed, transition to the Playing state
         // We spawn only the ClientConnection entity here to enable joining mode.
 
-        next_state.set(LauncherStates::Generating);
+        next_state.set(LauncherStates::Connecting);
         *mode = LauncherMode::Client(event.address.clone());
     }
+}
+
+fn setup_connecting_ui() {}
+
+fn setup_connections(mut commands: Commands, mode: Res<LauncherMode>) {
+    info!("Setting up connections in mode: {:?}", *mode);
+
+    match &*mode {
+        LauncherMode::Host => {
+            let server = commands
+                .spawn((
+                    Name::new("ServerListener"),
+                    ServerListener,
+                    StateScoped(LauncherStates::Playing),
+                ))
+                .id();
+
+            commands.spawn((
+                Name::new("ClientConnection"),
+                HostConnection { server },
+                StateScoped(LauncherStates::Playing),
+            ));
+        }
+        LauncherMode::Client(address) => {
+            let addr = IpAddr::from_str(address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
+
+            commands.spawn((
+                Name::new("ClientConnection"),
+                ClientConnection {
+                    address: SocketAddr::new(addr, SERVER_PORT),
+                },
+                StateScoped(LauncherStates::Playing),
+            ));
+        }
+    }
+}
+
+fn check_connection_progress(client_ready: Res<ClientNetworkStateReady>) -> Progress {
+    let done = if **client_ready { 1 } else { 0 };
+    debug!("Connection progress: {}/1", done);
+
+    Progress { done, total: 1 }
 }
 
 fn setup_loading_ui() {
@@ -269,49 +269,6 @@ fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProg
     Progress {
         done: terrain_progress.generated_chunks,
         total: total,
-    }
-}
-
-fn setup_connections(
-    mut commands: Commands,
-    mode: Res<LauncherMode>,
-    player_name: Res<PlayerNameSetting>,
-) {
-    info!("Setting up connections in mode: {:?}", *mode);
-
-    match &*mode {
-        LauncherMode::Host => {
-            let server = commands
-                .spawn((
-                    Name::new("ServerListener"),
-                    ServerListener,
-                    StateScoped(LauncherStates::Playing),
-                ))
-                .id();
-
-            commands.spawn((
-                Name::new("ClientConnection"),
-                HostConnection { server },
-                ClientMetadata {
-                    username: (**player_name).clone(),
-                },
-                StateScoped(LauncherStates::Playing),
-            ));
-        }
-        LauncherMode::Client(address) => {
-            let addr = IpAddr::from_str(address).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
-
-            commands.spawn((
-                Name::new("ClientConnection"),
-                ClientConnection {
-                    address: SocketAddr::new(addr, SERVER_PORT),
-                },
-                ClientMetadata {
-                    username: (**player_name).clone(),
-                },
-                StateScoped(LauncherStates::Playing),
-            ));
-        }
     }
 }
 
@@ -397,7 +354,9 @@ fn setup_terrain_assets(mut commands: Commands) {
     ]));
 }
 
-fn setup_controller(mut commands: Commands) {
+fn setup_controller(mut commands: Commands, mut ev_spawn: EventWriter<ClientSpawnPlayerEvent>) {
+    ev_spawn.write(ClientSpawnPlayerEvent);
+
     commands.spawn((
         HeadCameraControllerBundle::default(),
         Camera3d::default(),

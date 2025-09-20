@@ -24,7 +24,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 // use pathfinding::prelude::astar;
 
 #[cfg(feature = "debug")]
-use self::debug::{DebugPlugin, DebugSet};
+use self::debug::DebugPlugin;
 
 #[derive(Component, Clone, Debug, Deref, DerefMut, Reflect)]
 pub struct TileCoord(pub IVec2);
@@ -133,10 +133,6 @@ impl TileMapStorage {
     // TODO: implement pathfinding
 }
 
-/// The TileMapSet is a system set used to group tile map related systems together.
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TileMapSet;
-
 /// The TileMapPlugin is a Bevy plugin that sets up the square tilemap system.
 /// The plugin requires a component type `C` that can be constructed from a `IVec2` coordinate.
 /// The plugin will generate a square grid based on the specified tile size, chunk radius, and
@@ -168,8 +164,6 @@ impl Plugin for TileMapPlugin {
 
         #[cfg(feature = "debug")]
         app.add_plugins(DebugPlugin);
-        #[cfg(feature = "debug")]
-        app.configure_sets(Update, DebugSet.in_set(TileMapSet));
 
         app.add_event::<TileDiscoverEvent>();
 
@@ -180,7 +174,7 @@ impl Plugin for TileMapPlugin {
             chunks: HashMap::default(),
         });
 
-        app.add_systems(Update, generate_chunks.in_set(TileMapSet).chain());
+        app.add_systems(Update, generate_chunks);
     }
 }
 
@@ -201,7 +195,7 @@ fn generate_chunks(
             if let Some(_) = storage.get_chunk(center) {
                 continue;
             }
-            debug!("Spawning new chunk at center {:?}", center);
+            trace!("Spawning new chunk at center {:?}", center);
 
             let pos = storage.tile_to_world_pos(center).extend(0.0).xzy();
             let chunk_entity = commands
@@ -258,15 +252,12 @@ mod debug {
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
     struct ShowGrid(pub bool);
 
-    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct DebugSet;
-
     pub struct DebugPlugin;
 
     impl Plugin for DebugPlugin {
         fn build(&self, app: &mut App) {
             app.insert_resource(ShowGrid(true));
-            app.add_systems(Update, (toggle, draw_grid).in_set(DebugSet));
+            app.add_systems(Update, (toggle, draw_grid));
         }
     }
 

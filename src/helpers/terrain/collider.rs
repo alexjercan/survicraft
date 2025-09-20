@@ -1,21 +1,15 @@
 //! TODO: Documentation
 
-use crate::helpers::tilemap::prelude::*;
 use super::components::*;
+use crate::helpers::tilemap::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
-
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TerrainColliderPluginSet;
 
 pub struct TerrainColliderPlugin;
 
 impl Plugin for TerrainColliderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (generate_chunk_collider).in_set(TerrainColliderPluginSet),
-        );
+        app.add_systems(Update, generate_chunk_collider);
     }
 }
 
@@ -30,7 +24,7 @@ fn generate_chunk_collider(
     if q_meshes.is_empty() {
         return;
     }
-    debug!("Generating collider for {} meshes", q_meshes.iter().len());
+    trace!("Generating collider for {} meshes", q_meshes.iter().len());
 
     for (entity, ChunkMesh(mesh), ChildOf(parent)) in q_meshes.iter() {
         commands.entity(entity).insert((

@@ -15,7 +15,7 @@ use bevy::{
 use itertools::Itertools;
 
 pub mod prelude {
-    pub use super::{ChunkMapFunction, ChunkMapInput, ChunkMapPlugin, ChunkMapPluginSet};
+    pub use super::{ChunkMapFunction, ChunkMapInput, ChunkMapPlugin};
 }
 
 pub trait ChunkMapInput {
@@ -26,9 +26,6 @@ pub trait ChunkMapInput {
 pub trait ChunkMapFunction<T, U> {
     fn get(&self, point: T) -> U;
 }
-
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ChunkMapPluginSet; // NOTE: Might want to parametrize this to match the plugin's type
 
 pub struct ChunkMapPlugin<T, U, F>
 where
@@ -63,7 +60,7 @@ where
 
         app.add_systems(
             Update,
-            (create_task::<T, U, F>, handle_task::<U>).in_set(ChunkMapPluginSet),
+            (create_task::<T, U, F>, handle_task::<U>),
         );
     }
 }
@@ -122,7 +119,7 @@ fn create_task<T, U, F>(
             })
             .collect_vec();
 
-        debug!(
+        trace!(
             "Creating compute task for chunk {:?} with {} points",
             chunk_entity,
             chunk.len()

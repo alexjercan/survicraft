@@ -1,13 +1,14 @@
 //! The network plugin handles client connections to the server and sync's
 //! the client metadata (e.g. username) upon connection.
 
-use crate::protocol::prelude::*;
+use crate::{helpers::prelude::*, protocol::prelude::*};
 use bevy::prelude::*;
 use lightyear::{
     netcode::{Key, NetcodeClient},
     prelude::{client::NetcodeConfig, *},
 };
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::time::SystemTime;
 
 /// Structure representing a request to connect to a server.
 /// To connect to the server, add this component to an entity.
@@ -23,27 +24,35 @@ pub struct HostConnection {
     pub server: Entity,
 }
 
-/// Component to store client metadata such as username.
-/// This is used to add metadata to the client upon connection.
-#[derive(Debug, Clone, Component, Reflect)]
-pub struct ClientMetadata {
-    pub username: String,
-}
+#[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Deref, DerefMut)]
+pub struct PlayerNameSetting(pub String);
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct NetworkPluginSet;
+#[derive(Resource, Debug, Clone, PartialEq, Eq, Deref, DerefMut, Reflect)]
+pub struct ClientNetworkStateReady(pub bool);
+
+impl Default for PlayerNameSetting {
+    fn default() -> Self {
+        let time = SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        Self(format!("Player{}", time % 1000))
+    }
+}
 
 pub(crate) struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<ClientConnection>()
-            .register_type::<HostConnection>()
-            .register_type::<ClientMetadata>();
+            .register_type::<HostConnection>();
+
+        app.insert_resource(PlayerNameSetting::default());
+        app.insert_resource(ClientNetworkStateReady(false));
 
         app.add_observer(on_client_connection_added);
         app.add_observer(on_host_connection_added);
-        app.add_systems(FixedUpdate, on_welcome_message.in_set(NetworkPluginSet));
+        app.add_systems(FixedUpdate, on_welcome_message);
     }
 }
 
@@ -51,6 +60,7 @@ fn on_client_connection_added(
     trigger: Trigger<OnAdd, ClientConnection>,
     q_connection: Query<&ClientConnection, Added<ClientConnection>>,
     mut commands: Commands,
+    mut client_ready: ResMut<ClientNetworkStateReady>,
 ) -> Result {
     let entity = trigger.target();
     let connection = q_connection.get(entity)?;
@@ -58,6 +68,7 @@ fn on_client_connection_added(
         "Starting client, connecting to server at {}",
         connection.address
     );
+    **client_ready = false;
 
     let auth = Authentication::Manual {
         server_addr: connection.address,
@@ -92,10 +103,12 @@ fn on_host_connection_added(
     trigger: Trigger<OnAdd, HostConnection>,
     q_connection: Query<&HostConnection>,
     mut commands: Commands,
+    mut client_ready: ResMut<ClientNetworkStateReady>,
 ) -> Result {
     let entity = trigger.target();
     let connection = q_connection.get(entity)?;
     info!("Starting client, connecting to host server");
+    **client_ready = false;
 
     let client = commands
         .entity(entity)
@@ -116,24 +129,23 @@ fn on_host_connection_added(
 fn on_welcome_message(
     mut ev_welcome: EventReader<ServerWelcomeEvent>,
     sender: Single<(&RemoteId, &mut MessageSender<ClientMetaMessage>)>,
-    mut sender_spawn: Single<&mut MessageSender<ClientSpawnRequest>>,
-    metadata: Single<&ClientMetadata>,
+    player_name: Res<PlayerNameSetting>,
+    mut client_ready: ResMut<ClientNetworkStateReady>,
+    mut world_seed: ResMut<TerrainGenerationSeed>,
 ) {
     let (RemoteId(local), mut sender) = sender.into_inner();
-    for ev in ev_welcome.read() {
-        let peer = **ev;
+    for &ServerWelcomeEvent { peer, seed } in ev_welcome.read() {
         if *local != peer {
             continue;
         }
-
         debug!("Received welcome message from server: {:?}", peer);
+        **client_ready = true;
+        **world_seed = seed;
 
-        debug!("Sending client metadata: {:?}", metadata.username);
-        sender.send::<MessageChannel>(ClientMetaMessage {
-            username: metadata.username.clone(),
-        });
-
-        debug!("Sending spawn request");
-        sender_spawn.send::<MessageChannel>(ClientSpawnRequest);
+        let metadata = ClientMetaMessage {
+            username: player_name.to_string(),
+        };
+        debug!("Sending client metadata: {:?}", metadata);
+        sender.send::<MessageChannel>(metadata);
     }
 }

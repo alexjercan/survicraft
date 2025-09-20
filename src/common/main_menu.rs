@@ -8,7 +8,7 @@ use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
 use std::{fmt::Debug, time::SystemTime};
 
-use crate::helpers::prelude::*;
+use crate::{helpers::prelude::*, client::prelude::*};
 
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy)]
 pub enum DisplayQualitySetting {
@@ -19,9 +19,6 @@ pub enum DisplayQualitySetting {
 
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy, Deref, DerefMut)]
 pub struct VolumeSetting(pub u32);
-
-#[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Deref, DerefMut)]
-pub struct PlayerNameSetting(pub String);
 
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
@@ -99,9 +96,6 @@ enum MenuButtonAction {
     Quit,
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MainMenuPluginSet;
-
 pub struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
@@ -113,8 +107,8 @@ impl Plugin for MainMenuPlugin {
 
         app.insert_resource(DisplayQualitySetting::Medium);
         app.insert_resource(VolumeSetting(7));
-        app.insert_resource(PlayerNameSetting("Player".to_string()));
 
+        app.insert_resource(MainMenuIcons::default());
         app.add_systems(
             Update,
             (
@@ -129,24 +123,16 @@ impl Plugin for MainMenuPlugin {
                 menu_action,
                 handle_button_interact,
                 handle_text_interact.before(TextInputSystem),
-            )
-                .in_set(MainMenuPluginSet),
+            ),
         );
         app.add_systems(
             Update,
             (
                 setting_button::<DisplayQualitySetting>
-                    .run_if(in_state(MenuState::SettingsDisplay))
-                    .in_set(MainMenuPluginSet),
-                setting_button::<VolumeSetting>
-                    .run_if(in_state(MenuState::SettingsSound))
-                    .in_set(MainMenuPluginSet),
-                name_settings_menu_update
-                    .run_if(in_state(MenuState::SettingsName))
-                    .in_set(MainMenuPluginSet),
-                seed_settings_menu_update
-                    .run_if(in_state(MenuState::NewGame))
-                    .in_set(MainMenuPluginSet),
+                    .run_if(in_state(MenuState::SettingsDisplay)),
+                setting_button::<VolumeSetting>.run_if(in_state(MenuState::SettingsSound)),
+                name_settings_menu_update.run_if(in_state(MenuState::SettingsName)),
+                seed_settings_menu_update.run_if(in_state(MenuState::NewGame)),
             ),
         );
     }
@@ -375,9 +361,9 @@ fn new_game_menu_setup(
     root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     **world_seed = SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs() as u32;
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as u32;
     debug!("World seed changed to {}", **world_seed);
 
     let button_node = Node {

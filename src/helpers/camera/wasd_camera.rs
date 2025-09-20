@@ -43,18 +43,13 @@ struct WASDCameraState {
     pitch: f32,
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct WASDCameraSet;
-
 pub struct WASDCameraPlugin;
 
 impl Plugin for WASDCameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (initialize, update_target, update_state, sync_transform)
-                .in_set(WASDCameraSet)
-                .chain(),
+            (initialize, update_target, update_state, sync_transform).chain(),
         );
     }
 }

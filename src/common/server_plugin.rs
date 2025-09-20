@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use lightyear::{connection::identity::is_server, prelude::server::ServerPlugins};
+use lightyear::prelude::server::ServerPlugins;
 use std::time::Duration;
 
 pub struct DedicatedServerPlugin;
@@ -25,7 +25,6 @@ impl Plugin for DedicatedServerPlugin {
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
         // This will run only in the Playing state.
         app.add_plugins(TerrainPlugin::default());
-        app.configure_sets(Update, TerrainPluginSet);
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
         app.add_plugins(
@@ -38,15 +37,12 @@ impl Plugin for DedicatedServerPlugin {
 
         // Player setup. We set up player-related systems and the player plugin.
         app.add_plugins(PlayerPlugin);
-        app.configure_sets(FixedUpdate, PlayerPluginSet);
-        app.configure_sets(Update, PlayerPluginSet);
 
         // --- Server plugins below here ---
 
         // The server plugin will run only if we are the server (i.e. hosting)
         // and in the Playing state
         app.add_plugins(ServerPlugin);
-        app.configure_sets(FixedUpdate, ServerPluginSet.run_if(is_server));
     }
 }
 

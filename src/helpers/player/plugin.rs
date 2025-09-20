@@ -5,13 +5,13 @@ use bevy::{ecs::query::QueryData, prelude::*};
 
 pub mod prelude {
     pub use super::{
-        PlayerCharacterController, PlayerCharacterInput, PlayerPlugin, PlayerPluginSet,
-        CHARACTER_CAPSULE_HEIGHT, CHARACTER_CAPSULE_RADIUS,
+        PlayerCharacterController, PlayerCharacterInput, PlayerPlugin, CHARACTER_CAPSULE_HEIGHT,
+        CHARACTER_CAPSULE_RADIUS,
     };
 }
 
 #[cfg(feature = "debug")]
-use self::debug::{PlayerDebugPlugin};
+use self::debug::PlayerDebugPlugin;
 
 pub const CHARACTER_CAPSULE_RADIUS: f32 = 0.5;
 pub const CHARACTER_CAPSULE_HEIGHT: f32 = 1.0;
@@ -29,18 +29,12 @@ pub struct PlayerCharacterInput {
     pub look: Vec2,
 }
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PlayerPluginSet;
-
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, handle_spawn_player.in_set(PlayerPluginSet));
-        app.add_systems(
-            FixedUpdate,
-            handle_character_actions.in_set(PlayerPluginSet),
-        );
+        app.add_systems(Update, handle_spawn_player);
+        app.add_systems(FixedUpdate, handle_character_actions);
 
         #[cfg(feature = "debug")]
         app.add_plugins(PlayerDebugPlugin);
@@ -194,16 +188,10 @@ fn apply_character_action(
 mod debug {
     use super::*;
 
-    #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-    pub struct PlayerDebugPluginSet;
-
     pub struct PlayerDebugPlugin;
     impl Plugin for PlayerDebugPlugin {
         fn build(&self, app: &mut App) {
-            app.add_systems(
-                Update,
-                log_player_character_state.in_set(PlayerDebugPluginSet),
-            );
+            app.add_systems(Update, log_player_character_state);
         }
     }
 

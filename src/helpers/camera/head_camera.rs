@@ -38,14 +38,11 @@ pub struct HeadCameraInput {
 #[derive(Component, Clone, Copy, Debug)]
 pub struct HeadCameraTarget;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct HeadCameraSet;
-
 pub struct HeadCameraPlugin;
 
 impl Plugin for HeadCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, sync_transform.in_set(HeadCameraSet));
+        app.add_systems(Update, sync_transform);
     }
 }
 

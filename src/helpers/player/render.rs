@@ -5,20 +5,13 @@ use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::PlayerRenderPlugin;
-    pub use super::PlayerRenderPluginSet;
 }
-
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PlayerRenderPluginSet;
 
 pub struct PlayerRenderPlugin;
 
 impl Plugin for PlayerRenderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            handle_render_player.in_set(PlayerRenderPluginSet),
-        );
+        app.add_systems(Update, handle_render_player);
     }
 }
 

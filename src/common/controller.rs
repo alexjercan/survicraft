@@ -3,16 +3,12 @@ use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::prelude::*;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PlayerControllerPluginSet;
-
 pub struct PlayerControllerPlugin;
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(HeadCameraPlugin);
         app.add_plugins(InputManagerPlugin::<CameraMovement>::default());
-        app.configure_sets(Update, HeadCameraSet);
 
         app.add_systems(
             Update,
@@ -22,8 +18,7 @@ impl Plugin for PlayerControllerPlugin {
                 handle_player_target,
                 update_camera_input,
                 update_player_input,
-            )
-                .in_set(PlayerControllerPluginSet),
+            ),
         );
     }
 }

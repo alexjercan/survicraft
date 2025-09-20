@@ -8,7 +8,7 @@ use leafwing_input_manager::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        AddChatHistoryItemEvent, ChatMenuRoot, ChatMessageSubmittedEvent, ChatPlugin, ChatPluginSet,
+        AddChatHistoryItemEvent, ChatMenuRoot, ChatMessageSubmittedEvent, ChatPlugin,
     };
 }
 
@@ -63,9 +63,6 @@ struct HistoryItemUI;
 #[derive(Component, Clone, Copy, Debug)]
 struct ChatMessageInput;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ChatPluginSet;
-
 pub struct ChatPlugin;
 
 impl Plugin for ChatPlugin {
@@ -87,7 +84,6 @@ impl Plugin for ChatPlugin {
                 )
                     .chain(),
             )
-                .in_set(ChatPluginSet),
         );
     }
 }
