@@ -42,6 +42,8 @@ impl Plugin for TerrainGenerationPlugin {
             .register_type::<TerrainGenerationSeed>();
 
         app.add_plugins(TileMapPlugin::new(self.tile_size, self.chunk_radius))
+            // TODO: Somehow I want to be able to add this PlanetHeight from outside
+            // I need this to be more generic for copy pastability
             .add_plugins(ChunkMapPlugin::<TileCoord, TileNoiseHeight, _>::new(
                 PlanetHeight::default(),
             ))

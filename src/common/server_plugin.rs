@@ -24,7 +24,7 @@ impl Plugin for DedicatedServerPlugin {
 
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
         // This will run only in the Playing state.
-        app.add_plugins(TerrainPlugin::default());
+        app.add_plugins(TerrainGenerationPlugin);
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
         app.add_plugins(
@@ -50,8 +50,11 @@ fn setup_server(mut commands: Commands) {
     commands.spawn((Name::new("ServerListener"), ServerListener));
 }
 
-fn setup_terrain_generation(mut ev_discover: EventWriter<TileDiscoverEvent>) {
-    ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO, 5));
+fn setup_terrain_generation(mut commands: Commands) {
+    commands.spawn((
+        Name::new("InitializeTerrain"),
+        InitializeTerrain,
+    ));
 }
 
 fn setup_terrain_assets(mut commands: Commands) {
