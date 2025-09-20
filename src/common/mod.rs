@@ -5,6 +5,7 @@ mod plugin;
 mod render;
 mod server_plugin;
 mod setup;
+mod terrain;
 
 pub mod prelude {
     pub use super::assets::*;
@@ -14,4 +15,5 @@ pub mod prelude {
     pub use super::render::*;
     pub use super::server_plugin::*;
     pub use super::setup::*;
+    pub use super::terrain::*;
 }

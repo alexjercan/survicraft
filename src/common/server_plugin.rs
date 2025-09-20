@@ -51,7 +51,7 @@ fn setup_server(mut commands: Commands) {
 }
 
 fn setup_terrain_generation(mut ev_discover: EventWriter<TileDiscoverEvent>) {
-    ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO));
+    ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO, 5));
 }
 
 fn setup_terrain_assets(mut commands: Commands) {

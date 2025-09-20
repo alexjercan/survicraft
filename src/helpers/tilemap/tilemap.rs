@@ -42,12 +42,14 @@ pub struct TileBorder;
 pub struct TileDiscoverEvent {
     /// The position in world coordinates where the discovery event occurs.
     pub pos: Vec2,
+    /// The radius around the position to discover tiles.
+    pub radius: u32,
 }
 
 impl TileDiscoverEvent {
     /// Creates a new TileDiscoverEvent with the specified position.
-    pub fn new(pos: Vec2) -> Self {
-        Self { pos }
+    pub fn new(pos: Vec2, radius: u32) -> Self {
+        Self { pos , radius }
     }
 }
 
@@ -58,16 +60,15 @@ pub struct ChunkCoord(pub IVec2);
 pub struct TileMapStorage {
     tile_size: Vec2,
     chunk_radius: u32,
-    discover_radius: u32,
     chunks: HashMap<IVec2, Entity>,
 }
 
 impl TileMapStorage {
-    fn discover_chunks(&self, center: IVec2) -> Vec<IVec2> {
+    fn discover_chunks(&self, center: IVec2, discover_radius: u32) -> Vec<IVec2> {
         let mut chunks = Vec::new();
         let step = self.chunk_radius as i32 * 2 + 1;
-        for x in -(self.discover_radius as i32)..=self.discover_radius as i32 {
-            for y in -(self.discover_radius as i32)..=self.discover_radius as i32 {
+        for x in -(discover_radius as i32)..=discover_radius as i32 {
+            for y in -(discover_radius as i32)..=discover_radius as i32 {
                 let chunk_x = center.x + x * step;
                 let chunk_y = center.y + y * step;
                 chunks.push(IVec2::new(chunk_x, chunk_y));
@@ -143,15 +144,13 @@ impl TileMapStorage {
 pub struct TileMapPlugin {
     tile_size: Vec2,
     chunk_radius: u32,
-    discover_radius: u32,
 }
 
 impl TileMapPlugin {
-    pub fn new(tile_size: Vec2, chunk_radius: u32, discover_radius: u32) -> Self {
+    pub fn new(tile_size: Vec2, chunk_radius: u32) -> Self {
         Self {
             tile_size,
             chunk_radius,
-            discover_radius,
         }
     }
 }
@@ -170,7 +169,6 @@ impl Plugin for TileMapPlugin {
         app.insert_resource(TileMapStorage {
             tile_size: self.tile_size,
             chunk_radius: self.chunk_radius,
-            discover_radius: self.discover_radius,
             chunks: HashMap::default(),
         });
 
@@ -186,12 +184,18 @@ fn generate_chunks(
     for ev in ev_discover.read() {
         let tile = storage.world_pos_to_tile(ev.pos);
         let center = storage.tile_to_center(&tile);
+
+        let chunks = storage.discover_chunks(center, ev.radius);
+        if chunks.is_empty() {
+            continue;
+        }
+
         debug!(
             "Discovering chunks around tile {:?} at center {:?}",
             tile, center
         );
 
-        for center in storage.discover_chunks(center) {
+        for center in chunks {
             if let Some(_) = storage.get_chunk(center) {
                 continue;
             }
@@ -412,12 +416,11 @@ mod tests {
         let storage = TileMapStorage {
             tile_size: Vec2::splat(1.0),
             chunk_radius: 2,
-            discover_radius: 1,
             chunks: HashMap::default(),
         };
 
         let center = IVec2::new(0, 0);
-        let chunks = storage.discover_chunks(center);
+        let chunks = storage.discover_chunks(center, 1);
         let expected = vec![
             IVec2::new(-5, -5),
             IVec2::new(-5, 0),

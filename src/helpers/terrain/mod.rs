@@ -29,7 +29,6 @@ pub(crate) const CHUNK_RADIUS: u32 = 16;
 pub struct TerrainPlugin {
     tile_size: Vec2,
     chunk_radius: u32,
-    discover_radius: u32,
     max_height: f64,
 }
 
@@ -38,18 +37,16 @@ impl Default for TerrainPlugin {
         Self {
             tile_size: TILE_SIZE,
             chunk_radius: CHUNK_RADIUS,
-            discover_radius: 3,
             max_height: 10.0,
         }
     }
 }
 
 impl TerrainPlugin {
-    pub fn new(tile_size: Vec2, chunk_radius: u32, discover_radius: u32, max_height: f64) -> Self {
+    pub fn new(tile_size: Vec2, chunk_radius: u32, max_height: f64) -> Self {
         Self {
             tile_size,
             chunk_radius,
-            discover_radius,
             max_height,
         }
     }
@@ -60,7 +57,6 @@ impl Plugin for TerrainPlugin {
         app.add_plugins(TerrainGenerationPlugin::new(
             self.tile_size,
             self.chunk_radius,
-            self.discover_radius,
         ));
         app.add_plugins(TerrainGeometryPlugin::new(self.tile_size, self.max_height));
         app.add_plugins(TerrainColliderPlugin);

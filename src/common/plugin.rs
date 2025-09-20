@@ -98,7 +98,7 @@ impl Plugin for LauncherPlugin {
         );
 
         // Terrain generation setup and progress tracking.
-        app.add_plugins(TerrainPlugin::default());
+        app.add_plugins(TerrainGenerationPlugin);
         app.add_plugins(TerrainRenderPlugin::default());
         app.add_systems(
             OnEnter(LauncherStates::Generating),
@@ -258,8 +258,11 @@ fn setup_loading_ui() {
     // TODO: Implement a proper loading UI
 }
 
-fn setup_terrain_generation(mut ev_discover: EventWriter<TileDiscoverEvent>) {
-    ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO));
+fn setup_terrain_generation(mut commands: Commands) {
+    commands.spawn((
+        Name::new("InitializeTerrain"),
+        InitializeTerrain,
+    ));
 }
 
 fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProgress>) -> Progress {

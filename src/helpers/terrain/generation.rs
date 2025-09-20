@@ -23,15 +23,13 @@ impl Default for TerrainGenerationSeed {
 pub struct TerrainGenerationPlugin {
     tile_size: Vec2,
     chunk_radius: u32,
-    discover_radius: u32,
 }
 
 impl TerrainGenerationPlugin {
-    pub fn new(tile_size: Vec2, chunk_radius: u32, discover_radius: u32) -> Self {
+    pub fn new(tile_size: Vec2, chunk_radius: u32) -> Self {
         Self {
             tile_size,
             chunk_radius,
-            discover_radius,
         }
     }
 }
@@ -43,15 +41,11 @@ impl Plugin for TerrainGenerationPlugin {
             .register_type::<TerrainGenerationProgress>()
             .register_type::<TerrainGenerationSeed>();
 
-        app.add_plugins(TileMapPlugin::new(
-            self.tile_size,
-            self.chunk_radius,
-            self.discover_radius,
-        ))
-        .add_plugins(ChunkMapPlugin::<TileCoord, TileNoiseHeight, _>::new(
-            PlanetHeight::default(),
-        ))
-        .add_systems(Update, handle_chunk);
+        app.add_plugins(TileMapPlugin::new(self.tile_size, self.chunk_radius))
+            .add_plugins(ChunkMapPlugin::<TileCoord, TileNoiseHeight, _>::new(
+                PlanetHeight::default(),
+            ))
+            .add_systems(Update, handle_chunk);
 
         app.insert_resource(TerrainGenerationProgress::default());
         app.add_systems(Update, handle_chunk_progress);
