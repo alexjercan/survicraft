@@ -30,7 +30,7 @@ fn handle_chat_submit(
 
 fn on_chat_message(
     mut ev_chat: EventReader<ServerChatMessageEvent>,
-    q_players: Query<(&PlayerMetadata, &PlayerId), With<Replicated>>,
+    q_players: Query<(&PlayerMetadata, &PlayerId)>,
     mut ev_history: EventWriter<AddChatHistoryItemEvent>,
 ) {
     for ev in ev_chat.read() {

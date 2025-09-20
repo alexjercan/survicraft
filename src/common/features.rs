@@ -92,7 +92,7 @@ fn handle_feature_tile(
     if q_hex.is_empty() {
         return;
     }
-    debug!("Handling feature tiles for {} hexes", q_hex.iter().len());
+    trace!("Handling feature tiles for {} hexes", q_hex.iter().len());
 
     for (entity, height, tile, feature) in q_hex.iter() {
         commands.entity(entity).insert(ChunkFeatureReady);
