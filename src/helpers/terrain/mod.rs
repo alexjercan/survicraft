@@ -21,6 +21,7 @@ pub mod prelude {
     pub use super::render::TerrainRenderPlugin;
     pub use super::resources::*;
     pub use super::TerrainPlugin;
+    pub use super::components::{Tile, TileWorldHeight};
 }
 
 pub(crate) const TILE_SIZE: Vec2 = Vec2::splat(1.0);

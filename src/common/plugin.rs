@@ -60,6 +60,7 @@ impl Plugin for LauncherPlugin {
 
         // Asset loading. This will transition from Loading to MainMenu state once done.
         app.add_systems(OnEnter(LauncherStates::Loading), setup_terrain_assets);
+        app.add_systems(OnEnter(LauncherStates::Loading), setup_feature_assets);
         app.add_loading_state(
             LoadingState::new(LauncherStates::Loading)
                 .continue_to_state(LauncherStates::MainMenu)
@@ -98,8 +99,8 @@ impl Plugin for LauncherPlugin {
         );
 
         // Terrain generation setup and progress tracking.
-        app.add_plugins(TerrainGenerationPlugin);
-        app.add_plugins(TerrainRenderPlugin::default());
+        app.add_plugins(TerrainGenerationPlugin { render: true });
+        app.add_plugins(FeaturesGenerationPlugin { render: true });
         app.add_systems(
             OnEnter(LauncherStates::Generating),
             (setup_loading_ui, setup_terrain_generation),
@@ -259,10 +260,7 @@ fn setup_loading_ui() {
 }
 
 fn setup_terrain_generation(mut commands: Commands) {
-    commands.spawn((
-        Name::new("InitializeTerrain"),
-        InitializeTerrain,
-    ));
+    commands.spawn((Name::new("InitializeTerrain"), InitializeTerrain));
 }
 
 fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProgress>) -> Progress {
@@ -357,6 +355,72 @@ fn setup_terrain_assets(mut commands: Commands) {
             },
         },
     ]));
+}
+
+fn setup_feature_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    debug!("Setting up feature assets...");
+
+    // TODO: I want to load these from file, but for now, hardcode them
+    // with some kind of cool syntax like:
+    //
+    // [feature]
+    //     id="tree"
+    //     name="Tree"
+    //     [variant]
+    //         id="sand"
+    //         name="Palm Tree"
+    //         threshold=0.9
+    //         scene="gltf/decoration/nature/trees_A_cut.gltf#Scene0"
+    //     [/variant]
+    //     [variant]
+    //         id="grass"
+    //         name="Oak Tree"
+    //         threshold=0.7
+    //         scene="gltf/decoration/nature/trees_A_small.gltf#Scene0"
+    //     [/variant]
+    //     [variant]
+    //         id="hills"
+    //         name="Pine Tree"
+    //         threshold=0.6
+    //         scene="gltf/decoration/nature/trees_A_large.gltf#Scene0"
+    //     [/variant]
+    //     [variant]
+    //         id="mountain"
+    //         name="Fir Tree"
+    //         threshold=0.8
+    //         scene="gltf/decoration/nature/trees_A_large.gltf#Scene0"
+    //     [/variant]
+    // [/feature]
+    commands.insert_resource(FeatureAssets::new(vec![FeatureAsset {
+        id: "tree".to_string(),
+        name: "Tree".to_string(),
+        variants: vec![
+            FeatureVariant {
+                id: "sand".to_string(),
+                name: "Palm Tree".to_string(),
+                threshold: 0.9,
+                scene: asset_server.load("gltf/decoration/nature/tree_single_A_cut.gltf#Scene0"),
+            },
+            FeatureVariant {
+                id: "grass".to_string(),
+                name: "Oak Tree".to_string(),
+                threshold: 0.7,
+                scene: asset_server.load("gltf/decoration/nature/tree_single_A.gltf#Scene0"),
+            },
+            FeatureVariant {
+                id: "hills".to_string(),
+                name: "Pine Tree".to_string(),
+                threshold: 0.6,
+                scene: asset_server.load("gltf/decoration/nature/tree_single_B.gltf#Scene0"),
+            },
+            FeatureVariant {
+                id: "mountain".to_string(),
+                name: "Fir Tree".to_string(),
+                threshold: 0.8,
+                scene: asset_server.load("gltf/decoration/nature/tree_single_B.gltf#Scene0"),
+            },
+        ],
+    }]));
 }
 
 fn setup_controller(mut commands: Commands, mut ev_spawn: EventWriter<ClientSpawnPlayerEvent>) {

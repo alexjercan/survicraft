@@ -186,7 +186,7 @@ fn generate_chunks(
         let center = storage.tile_to_center(&tile);
 
         let chunks = storage.discover_chunks(center, ev.radius);
-        if chunks.is_empty() {
+        if chunks.iter().all(|c| storage.get_chunk(*c).is_some()) {
             continue;
         }
 

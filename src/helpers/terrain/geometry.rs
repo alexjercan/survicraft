@@ -230,6 +230,7 @@ fn generate_chunk_mesh(
             let height_mesh = (height_value * layout.max_height).round();
 
             storage.insert(**local, height_mesh);
+            commands.entity(entity).insert(TileWorldHeight(height_mesh));
 
             commands.entity(entity).insert(ChunkMeshReady);
         }

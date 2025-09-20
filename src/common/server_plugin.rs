@@ -19,12 +19,13 @@ impl Plugin for DedicatedServerPlugin {
 
         // --- Playing related stuff below here ---
 
-        app.add_systems(Startup, (setup_terrain_assets, setup_terrain_generation).chain());
+        app.add_systems(Startup, (setup_terrain_assets, setup_feature_assets, setup_terrain_generation).chain());
         app.add_systems(Startup, setup_server);
 
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
         // This will run only in the Playing state.
-        app.add_plugins(TerrainGenerationPlugin);
+        app.add_plugins(TerrainGenerationPlugin { render: false });
+        app.add_plugins(FeaturesGenerationPlugin { render: false });
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics
         app.add_plugins(
@@ -121,4 +122,70 @@ fn setup_terrain_assets(mut commands: Commands) {
             },
         },
     ]));
+}
+
+fn setup_feature_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    debug!("Setting up feature assets...");
+
+    // TODO: I want to load these from file, but for now, hardcode them
+    // with some kind of cool syntax like:
+    //
+    // [feature]
+    //     id="tree"
+    //     name="Tree"
+    //     [variant]
+    //         id="sand"
+    //         name="Palm Tree"
+    //         threshold=0.9
+    //         scene="gltf/decoration/nature/trees_A_cut.gltf#Scene0"
+    //     [/variant]
+    //     [variant]
+    //         id="grass"
+    //         name="Oak Tree"
+    //         threshold=0.7
+    //         scene="gltf/decoration/nature/trees_A_small.gltf#Scene0"
+    //     [/variant]
+    //     [variant]
+    //         id="hills"
+    //         name="Pine Tree"
+    //         threshold=0.6
+    //         scene="gltf/decoration/nature/trees_A_large.gltf#Scene0"
+    //     [/variant]
+    //     [variant]
+    //         id="mountain"
+    //         name="Fir Tree"
+    //         threshold=0.8
+    //         scene="gltf/decoration/nature/trees_A_large.gltf#Scene0"
+    //     [/variant]
+    // [/feature]
+    commands.insert_resource(FeatureAssets::new(vec![FeatureAsset {
+        id: "tree".to_string(),
+        name: "Tree".to_string(),
+        variants: vec![
+            FeatureVariant {
+                id: "sand".to_string(),
+                name: "Palm Tree".to_string(),
+                threshold: 0.9,
+                scene: asset_server.load("gltf/decoration/nature/trees_A_cut.gltf#Scene0"),
+            },
+            FeatureVariant {
+                id: "grass".to_string(),
+                name: "Oak Tree".to_string(),
+                threshold: 0.3,
+                scene: asset_server.load("gltf/decoration/nature/trees_A_small.gltf#Scene0"),
+            },
+            FeatureVariant {
+                id: "hills".to_string(),
+                name: "Pine Tree".to_string(),
+                threshold: 0.4,
+                scene: asset_server.load("gltf/decoration/nature/trees_A_large.gltf#Scene0"),
+            },
+            FeatureVariant {
+                id: "mountain".to_string(),
+                name: "Fir Tree".to_string(),
+                threshold: 0.6,
+                scene: asset_server.load("gltf/decoration/nature/trees_A_large.gltf#Scene0"),
+            },
+        ],
+    }]));
 }

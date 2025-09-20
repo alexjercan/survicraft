@@ -14,3 +14,6 @@ pub struct ChunkMesh(pub Mesh);
 
 #[derive(Component, Debug, Clone, Copy, Reflect)]
 pub struct ChunkReady;
+
+#[derive(Component, Debug, Clone, Copy, Deref, DerefMut, Reflect)]
+pub struct TileWorldHeight(pub f64);
