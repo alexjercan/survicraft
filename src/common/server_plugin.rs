@@ -24,7 +24,7 @@ impl Plugin for DedicatedServerPlugin {
 
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
         // This will run only in the Playing state.
-        app.add_plugins(TerrainPlugin::default().with_seed(0));
+        app.add_plugins(TerrainPlugin::default());
         app.configure_sets(Update, TerrainPluginSet);
 
         // Physics setup. We disable interpolation and sleeping to ensure consistent physics

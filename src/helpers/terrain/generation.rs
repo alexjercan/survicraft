@@ -1,23 +1,37 @@
 //! TODO: Documentation
 
+use std::time::SystemTime;
+
 use super::{components::*, planet::*, resources::*};
 use crate::helpers::{chunk_map::prelude::*, tilemap::prelude::*};
 use bevy::prelude::*;
+
+#[derive(Resource, Debug, Clone, PartialEq, Deref, DerefMut, Reflect)]
+pub struct TerrainGenerationSeed(pub u32);
+
+impl Default for TerrainGenerationSeed {
+    fn default() -> Self {
+        Self(
+            SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as u32,
+        )
+    }
+}
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TerrainGenerationPluginSet;
 
 pub struct TerrainGenerationPlugin {
-    seed: u32,
     tile_size: Vec2,
     chunk_radius: u32,
     discover_radius: u32,
 }
 
 impl TerrainGenerationPlugin {
-    pub fn new(seed: u32, tile_size: Vec2, chunk_radius: u32, discover_radius: u32) -> Self {
+    pub fn new(tile_size: Vec2, chunk_radius: u32, discover_radius: u32) -> Self {
         Self {
-            seed,
             tile_size,
             chunk_radius,
             discover_radius,
@@ -29,7 +43,8 @@ impl Plugin for TerrainGenerationPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Tile>()
             .register_type::<TileNoiseHeight>()
-            .register_type::<TerrainGenerationProgress>();
+            .register_type::<TerrainGenerationProgress>()
+            .register_type::<TerrainGenerationSeed>();
 
         app.add_plugins(TileMapPlugin::new(
             self.tile_size,
@@ -37,7 +52,7 @@ impl Plugin for TerrainGenerationPlugin {
             self.discover_radius,
         ))
         .add_plugins(ChunkMapPlugin::<TileCoord, TileNoiseHeight, _>::new(
-            PlanetHeight::default().with_seed(self.seed),
+            PlanetHeight::default(),
         ))
         .configure_sets(Update, TileMapSet.in_set(TerrainGenerationPluginSet))
         .configure_sets(Update, ChunkMapPluginSet.in_set(TerrainGenerationPluginSet))
@@ -47,6 +62,13 @@ impl Plugin for TerrainGenerationPlugin {
         app.add_systems(
             Update,
             handle_chunk_progress.in_set(TerrainGenerationPluginSet),
+        );
+
+        app.insert_resource(TerrainGenerationSeed::default());
+        app.add_systems(
+            Update,
+            update_terrain_seed
+                .run_if(resource_changed::<TerrainGenerationSeed>),
         );
     }
 }
@@ -75,6 +97,11 @@ fn handle_chunk(
             }
         }
     }
+}
+
+fn update_terrain_seed(mut func: ResMut<PlanetHeight>, seed: Res<TerrainGenerationSeed>) {
+    *func = func.with_seed(**seed);
+    debug!("Updated terrain seed to {}", seed.0);
 }
 
 #[derive(Resource, Debug, Clone, Default, Reflect)]

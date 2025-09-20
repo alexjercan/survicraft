@@ -6,7 +6,9 @@
 
 use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
-use std::fmt::Debug;
+use std::{fmt::Debug, time::SystemTime};
+
+use crate::helpers::prelude::*;
 
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy)]
 pub enum DisplayQualitySetting {
@@ -59,6 +61,7 @@ pub struct ClientMultiplayerClickEvent {
 enum MenuState {
     #[default]
     Main,
+    NewGame,
     Multiplayer,
     Settings,
     SettingsDisplay,
@@ -68,6 +71,9 @@ enum MenuState {
 
 #[derive(Component, Clone, Copy, Debug)]
 struct MenuItem(MenuState);
+
+#[derive(Component, Clone, Copy, Debug)]
+struct SeedInput;
 
 #[derive(Component, Clone, Copy, Debug)]
 struct NameInput;
@@ -80,6 +86,7 @@ struct SelectedOption;
 
 #[derive(Component)]
 enum MenuButtonAction {
+    NewGame,
     Play,
     Multiplayer,
     MultiplayerConnect,
@@ -112,6 +119,7 @@ impl Plugin for MainMenuPlugin {
             Update,
             (
                 main_menu_setup,
+                new_game_menu_setup,
                 multiplayer_menu_setup,
                 settings_menu_setup,
                 display_settings_menu_setup,
@@ -135,6 +143,9 @@ impl Plugin for MainMenuPlugin {
                     .in_set(MainMenuPluginSet),
                 name_settings_menu_update
                     .run_if(in_state(MenuState::SettingsName))
+                    .in_set(MainMenuPluginSet),
+                seed_settings_menu_update
+                    .run_if(in_state(MenuState::NewGame))
                     .in_set(MainMenuPluginSet),
             ),
         );
@@ -201,6 +212,16 @@ fn name_settings_menu_update(
     for text_input_value in query {
         player_name.0 = text_input_value.0.clone();
         debug!("Player name changed to {:?}", player_name.0);
+    }
+}
+
+fn seed_settings_menu_update(
+    query: Query<&TextInputValue, (Changed<TextInputValue>, With<SeedInput>)>,
+    mut world_seed: ResMut<TerrainGenerationSeed>,
+) {
+    for text_input_value in query {
+        **world_seed = text_input_value.0.parse().unwrap_or(0);
+        debug!("World seed changed to {}", **world_seed);
     }
 }
 
@@ -278,7 +299,7 @@ fn main_menu_setup(
                                 Button,
                                 button_node.clone(),
                                 BackgroundColor(NORMAL_BUTTON),
-                                MenuButtonAction::Play,
+                                MenuButtonAction::NewGame,
                             ))
                             .with_children(|parent| {
                                 let icon = assets.right_icon.clone();
@@ -343,6 +364,94 @@ fn main_menu_setup(
                                     TextColor(TEXT_COLOR),
                                 ));
                             });
+                    });
+            });
+    });
+}
+
+fn new_game_menu_setup(
+    mut commands: Commands,
+    mut world_seed: ResMut<TerrainGenerationSeed>,
+    root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
+) {
+    **world_seed = SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as u32;
+    debug!("World seed changed to {}", **world_seed);
+
+    let button_node = Node {
+        width: Val::Px(200.0),
+        height: Val::Px(65.0),
+        margin: UiRect::all(Val::Px(20.0)),
+        justify_content: JustifyContent::Center,
+        align_items: AlignItems::Center,
+        ..default()
+    };
+    let button_text_style = (
+        TextFont {
+            font_size: 33.0,
+            ..default()
+        },
+        TextColor(TEXT_COLOR),
+    );
+
+    commands.entity(root.entity()).with_children(|parent| {
+        parent
+            .spawn((
+                Name::new("WorldSeedMenu"),
+                MenuItem(MenuState::NewGame),
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
+                    display: Display::None,
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                parent
+                    .spawn((Node {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },))
+                    .with_children(|parent| {
+                        parent.spawn((Text::new("World Seed"), button_text_style.clone()));
+                        parent.spawn((
+                            NameInput,
+                            Node {
+                                width: Val::Px(300.0),
+                                border: UiRect::all(Val::Px(5.0)),
+                                padding: UiRect::all(Val::Px(5.0)),
+                                ..default()
+                            },
+                            Interaction::None,
+                            BorderColor(BORDER_COLOR_INACTIVE),
+                            BackgroundColor(BACKGROUND_COLOR),
+                            FocusPolicy::Block,
+                            TextInput,
+                            TextInputTextFont(TextFont {
+                                font_size: 34.,
+                                ..default()
+                            }),
+                            TextInputTextColor(TextColor(TEXT_COLOR)),
+                            TextInputValue(format!("{}", **world_seed)),
+                            TextInputSettings {
+                                retain_on_submit: true,
+                                ..default()
+                            },
+                        ));
+                        parent
+                            .spawn((
+                                Button,
+                                button_node,
+                                BackgroundColor(NORMAL_BUTTON),
+                                MenuButtonAction::Play,
+                            ))
+                            .with_child((Text::new("Start"), button_text_style));
                     });
             });
     });
@@ -801,9 +910,7 @@ fn menu_action(
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
             match menu_button_action {
-                MenuButtonAction::Quit => {
-                    app_exit_events.write(AppExit::Success);
-                }
+                MenuButtonAction::NewGame => menu_state.set(MenuState::NewGame),
                 MenuButtonAction::Play => {
                     info!("Starting a new game from main menu");
                     play_ev.write(ClientPlayClickEvent);
@@ -830,6 +937,9 @@ fn menu_action(
                     menu_state.set(MenuState::Main);
                 }
                 MenuButtonAction::SettingsName => menu_state.set(MenuState::SettingsName),
+                MenuButtonAction::Quit => {
+                    app_exit_events.write(AppExit::Success);
+                }
             }
         }
     }

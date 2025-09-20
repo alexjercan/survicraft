@@ -20,7 +20,7 @@ pub mod prelude {
     pub use super::render::{TerrainRenderPlugin, TerrainRenderPluginSet};
     pub use super::resources::*;
     pub use super::{TerrainPlugin, TerrainPluginSet};
-    pub use super::generation::TerrainGenerationProgress;
+    pub use super::generation::{TerrainGenerationSeed, TerrainGenerationProgress};
 }
 
 pub(crate) const TILE_SIZE: Vec2 = Vec2::splat(1.0);
@@ -30,7 +30,6 @@ pub(crate) const CHUNK_RADIUS: u32 = 16;
 pub struct TerrainPluginSet;
 
 pub struct TerrainPlugin {
-    seed: u32,
     tile_size: Vec2,
     chunk_radius: u32,
     discover_radius: u32,
@@ -40,7 +39,6 @@ pub struct TerrainPlugin {
 impl Default for TerrainPlugin {
     fn default() -> Self {
         Self {
-            seed: 0,
             tile_size: TILE_SIZE,
             chunk_radius: CHUNK_RADIUS,
             discover_radius: 3,
@@ -51,31 +49,23 @@ impl Default for TerrainPlugin {
 
 impl TerrainPlugin {
     pub fn new(
-        seed: u32,
         tile_size: Vec2,
         chunk_radius: u32,
         discover_radius: u32,
         max_height: f64,
     ) -> Self {
         Self {
-            seed,
             tile_size,
             chunk_radius,
             discover_radius,
             max_height,
         }
     }
-
-    pub fn with_seed(mut self, seed: u32) -> Self {
-        self.seed = seed;
-        self
-    }
 }
 
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(TerrainGenerationPlugin::new(
-            self.seed,
             self.tile_size,
             self.chunk_radius,
             self.discover_radius,

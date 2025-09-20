@@ -107,7 +107,7 @@ impl Plugin for LauncherPlugin {
 
         // Terrain setup. We set up terrain assets and the terrain plugin itself.
         // This will run only in the Playing state.
-        app.add_plugins(TerrainPlugin::default().with_seed(0));
+        app.add_plugins(TerrainPlugin::default());
         app.configure_sets(
             Update,
             TerrainPluginSet
@@ -262,7 +262,7 @@ fn setup_terrain_generation(mut ev_discover: EventWriter<TileDiscoverEvent>) {
 
 fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProgress>) -> Progress {
     let total = terrain_progress.total_chunks.max(1); // Avoid division by zero
-    info!(
+    debug!(
         "Terrain generation progress: {}/{} chunks",
         terrain_progress.generated_chunks, total
     );
