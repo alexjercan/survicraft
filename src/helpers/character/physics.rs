@@ -5,8 +5,8 @@ use bevy::{ecs::query::QueryData, prelude::*};
 
 pub mod prelude {
     pub use super::{
-        PlayerCharacterController, PlayerCharacterInput, PlayerPlugin, CHARACTER_CAPSULE_HEIGHT,
-        CHARACTER_CAPSULE_RADIUS,
+        PhysicsCharacterBundle, PhysicsCharacterInput, PhysicsCharacterPlugin,
+        CHARACTER_CAPSULE_HEIGHT, CHARACTER_CAPSULE_RADIUS,
     };
 }
 
@@ -16,73 +16,21 @@ use self::debug::PlayerDebugPlugin;
 pub const CHARACTER_CAPSULE_RADIUS: f32 = 0.5;
 pub const CHARACTER_CAPSULE_HEIGHT: f32 = 1.0;
 
-/// Marker component for the player character entity. Spawn this when you
-/// want to attach a player bundle and have it be controlled by a player.
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PlayerCharacterController;
+pub struct PhysicsCharacterPlugin;
 
-/// The input component for the player character, which stores the current input state.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct PlayerCharacterInput {
-    pub move_axis: Vec2,
-    pub jump: bool,
-    pub look: Vec2,
-}
-
-pub struct PlayerPlugin;
-
-impl Plugin for PlayerPlugin {
+impl Plugin for PhysicsCharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, handle_spawn_player);
-        app.add_systems(Update, handle_player_rotation);
-        app.add_systems(FixedUpdate, handle_character_actions);
+        app.register_type::<PhysicsCharacterInput>();
 
         #[cfg(feature = "debug")]
         app.add_plugins(PlayerDebugPlugin);
-    }
-}
 
-fn handle_spawn_player(
-    mut commands: Commands,
-    q_player: Query<Entity, Added<PlayerCharacterController>>,
-) {
-    for entity in &q_player {
-        debug!("Adding PlayerCharacterInput and CharacterPhysicsBundle to entity {entity:?}");
-
-        commands.entity(entity).insert((
-            PlayerCharacterInput::default(),
-            CharacterPhysicsBundle::default(),
-        ));
-    }
-}
-
-fn handle_player_rotation(
-    mut q_player: Query<(&PlayerCharacterInput, &mut Rotation), With<PlayerCharacterController>>,
-) {
-    // TODO: unhardcode these values
-    const LOOK_SENSITIVITY: f32 = 0.0025;
-
-    for (input, mut rotation) in &mut q_player {
-        let yaw_delta = -input.look.x * LOOK_SENSITIVITY;
-        if yaw_delta.abs() > f32::EPSILON {
-            let yaw_rotation = Quat::from_rotation_y(yaw_delta);
-            rotation.0 = yaw_rotation * rotation.0;
-        }
-    }
-}
-
-fn handle_character_actions(
-    time: Res<Time>,
-    spatial_query: SpatialQuery,
-    mut q_player: Query<(&PlayerCharacterInput, CharacterQuery), With<PlayerCharacterController>>,
-) {
-    for (input, mut character) in &mut q_player {
-        apply_character_action(&time, &spatial_query, input, &mut character);
+        app.add_systems(FixedUpdate, handle_character_actions);
     }
 }
 
 #[derive(Bundle)]
-pub struct CharacterPhysicsBundle {
+pub struct PhysicsCharacterBundle {
     collider: Collider,
     rigid_body: RigidBody,
     external_force: ExternalForce,
@@ -91,7 +39,7 @@ pub struct CharacterPhysicsBundle {
     friction: Friction,
 }
 
-impl Default for CharacterPhysicsBundle {
+impl Default for PhysicsCharacterBundle {
     fn default() -> Self {
         Self {
             collider: Collider::capsule(CHARACTER_CAPSULE_RADIUS, CHARACTER_CAPSULE_HEIGHT),
@@ -107,9 +55,25 @@ impl Default for CharacterPhysicsBundle {
     }
 }
 
+#[derive(Component, Clone, Copy, Debug, Default, Reflect)]
+pub struct PhysicsCharacterInput {
+    pub move_axis: Vec2,
+    pub jump: bool,
+}
+
+fn handle_character_actions(
+    time: Res<Time>,
+    spatial_query: SpatialQuery,
+    mut q_player: Query<(&PhysicsCharacterInput, CharacterQuery)>,
+) {
+    for (input, mut character) in &mut q_player {
+        apply_character_action(&time, &spatial_query, input, &mut character);
+    }
+}
+
 #[derive(QueryData)]
 #[query_data(mutable, derive(Debug))]
-pub(super) struct CharacterQuery {
+struct CharacterQuery {
     external_force: &'static mut ExternalForce,
     external_impulse: &'static mut ExternalImpulse,
     linear_velocity: &'static LinearVelocity,
@@ -123,7 +87,7 @@ pub(super) struct CharacterQuery {
 fn apply_character_action(
     time: &Res<Time>,
     spatial_query: &SpatialQuery,
-    input: &PlayerCharacterInput,
+    input: &PhysicsCharacterInput,
     character: &mut CharacterQueryItem,
 ) {
     // TODO: unhardcode these values
@@ -204,11 +168,11 @@ mod debug {
     }
 
     fn log_player_character_state(
-        q_player: Query<CharacterQuery, With<PlayerCharacterController>>,
+        q_player: Query<CharacterQuery, With<PhysicsCharacterInput>>,
     ) {
         for character in &q_player {
             trace!(
-                "PlayerCharacter {:?}: ExternalForce={:?}, ExternalImpulse={:?}, LinearVelocity={:?}, Mass={:?}, Position={:?}, Rotation={:?}",
+                "PlayerController {:?}: ExternalForce={:?}, ExternalImpulse={:?}, LinearVelocity={:?}, Mass={:?}, Position={:?}, Rotation={:?}",
                 character.entity,
                 character.external_force,
                 character.external_impulse,

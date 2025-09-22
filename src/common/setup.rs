@@ -6,7 +6,7 @@ use bevy::{
     app::ScheduleRunnerPlugin,
     log::{Level, LogPlugin},
     prelude::*,
-    window::PresentMode,
+    window::{CursorGrabMode, PresentMode, PrimaryWindow},
     winit::WinitPlugin,
 };
 
@@ -53,6 +53,9 @@ pub fn new_gui_app() -> App {
     #[cfg(feature = "debug")]
     app.add_plugins((InpsectorDebugPlugin, LoggingDebugPlugin));
 
+    // NOTE: Just for non UI, lock cursor on left click and unlock on escape
+    app.add_systems(Update, (lock_on_left_click, unlock_on_escape));
+
     app
 }
 
@@ -74,6 +77,31 @@ pub fn new_headless_app() -> App {
     app.add_plugins(LoggingDebugPlugin);
 
     app
+}
+
+fn lock_on_left_click(
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+) {
+    // TODO: Not for UI
+    if mouse.just_pressed(MouseButton::Right) {
+        if let Ok(mut window) = windows.single_mut() {
+            window.cursor_options.grab_mode = CursorGrabMode::Locked;
+            window.cursor_options.visible = false;
+        }
+    }
+}
+
+fn unlock_on_escape(
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    keys: Res<ButtonInput<KeyCode>>,
+) {
+    if keys.just_pressed(KeyCode::Escape) {
+        if let Ok(mut window) = windows.single_mut() {
+            window.cursor_options.grab_mode = CursorGrabMode::None;
+            window.cursor_options.visible = true;
+        }
+    }
 }
 
 #[cfg(feature = "debug")]
@@ -201,7 +229,7 @@ mod debug {
                 Option<&ActionState<CharacterAction>>,
                 Option<&InputBuffer<ActionState<CharacterAction>>>,
             ),
-            (With<PlayerCharacter>, Without<Confirmed>),
+            (With<PlayerController>, Without<Confirmed>),
         >,
     ) {
         let (timeline, rollback) = timeline.into_inner();
@@ -248,7 +276,7 @@ mod debug {
                 Option<&FrameInterpolate<Rotation>>,
                 Option<&VisualCorrection<Rotation>>,
             ),
-            (With<PlayerCharacter>, Without<Confirmed>),
+            (With<PlayerController>, Without<Confirmed>),
         >,
     ) {
         let (timeline, rollback) = timeline.into_inner();

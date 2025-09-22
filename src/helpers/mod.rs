@@ -3,7 +3,7 @@
 mod camera;
 mod chat;
 mod chunk_map;
-mod player;
+mod character;
 mod terrain;
 mod tilemap;
 
@@ -13,7 +13,7 @@ pub mod prelude {
     pub use super::camera::prelude::*;
     pub use super::chat::prelude::*;
     pub use super::chunk_map::prelude::*;
-    pub use super::player::prelude::*;
+    pub use super::character::prelude::*;
     pub use super::terrain::prelude::*;
     pub use super::tilemap::prelude::*;
 }

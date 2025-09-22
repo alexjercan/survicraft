@@ -92,6 +92,11 @@ fn on_client_connection_added(
             NetcodeClient::new(auth, NetcodeConfig::default())?,
             UdpIo::default(),
         ))
+        .insert(ReplicationSender::new(
+            SERVER_REPLICATION_INTERVAL,
+            SendUpdatesMode::SinceLastAck,
+            false,
+        ))
         .id();
 
     commands.trigger_targets(Connect, client);

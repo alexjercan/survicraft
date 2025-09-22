@@ -44,7 +44,7 @@ fn on_server_listener_added(trigger: Trigger<OnAdd, ServerListener>, mut command
 }
 
 fn on_new_client(
-    trigger: Trigger<OnAdd, Connected>,
+    trigger: Trigger<OnAdd, LinkOf>,
     mut commands: Commands,
     _server: Single<&Server>,
 ) {
@@ -53,6 +53,7 @@ fn on_new_client(
     commands
         .entity(trigger.target())
         .insert(Name::new("Client"))
+        .insert(ReplicationReceiver::default())
         .insert(ReplicationSender::new(
             SERVER_REPLICATION_INTERVAL,
             SendUpdatesMode::SinceLastAck,

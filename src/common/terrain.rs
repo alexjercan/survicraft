@@ -1,5 +1,5 @@
 use avian3d::prelude::*;
-use crate::{helpers::prelude::*, protocol::prelude::*};
+use crate::{helpers::prelude::*, common::prelude::*};
 use bevy::prelude::*;
 
 const DISCOVER_RADIUS: u32 = 5;
@@ -35,7 +35,7 @@ fn setup_initial_terrain(
 }
 
 fn discover_terrain_at_player_position(
-    q_player: Query<&Position, With<PlayerCharacter>>,
+    q_player: Query<&Position, With<PlayerController>>,
     mut ev_discover: EventWriter<TileDiscoverEvent>,
 ) {
     for player_pos in q_player.iter() {

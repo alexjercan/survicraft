@@ -3,6 +3,7 @@ mod common;
 mod helpers;
 mod protocol;
 mod server;
+mod plugin;
 
 pub mod prelude {
     pub use super::client::prelude::*;
@@ -10,4 +11,5 @@ pub mod prelude {
     pub use super::helpers::prelude::*;
     pub use super::protocol::prelude::*;
     pub use super::server::prelude::*;
+    pub use super::plugin::LauncherPlugin;
 }

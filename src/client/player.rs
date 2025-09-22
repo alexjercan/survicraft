@@ -24,7 +24,7 @@ fn on_spawn_player(
     let (RemoteId(peer), mut sender) = sender.into_inner();
 
     for _ in ev_spawn.read() {
-        debug!("Sending spawn request for player {:?}", peer);
+        debug!("Sending spawn request for player {:?}", *peer);
 
         sender.send::<MessageChannel>(ClientSpawnRequest);
     }

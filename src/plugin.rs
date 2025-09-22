@@ -1,12 +1,8 @@
 //! A Bevy plugin that serves as the main entry point for the game launcher.
 
-use super::{assets::*, main_menu::*};
 use crate::prelude::*;
 use avian3d::prelude::*;
-use bevy::{
-    prelude::*,
-    window::{CursorGrabMode, PrimaryWindow},
-};
+use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_simple_text_input::TextInputPlugin;
 use iyes_progress::prelude::*;
@@ -128,13 +124,9 @@ impl Plugin for LauncherPlugin {
         app.add_systems(OnEnter(LauncherStates::Playing), setup_chat);
         app.add_plugins(ChatPlugin);
 
-        // Player setup. We set up player-related systems and the player plugin.
-        app.add_plugins(PlayerPlugin);
-        app.add_plugins(PlayerRenderPlugin);
-
         // The head camera controller will run only in the Playing state
         app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
-        app.add_plugins(PlayerControllerPlugin);
+        app.add_plugins(PlayerControllerPlugin { render: true });
 
         app.add_plugins(CommonRendererPlugin);
 
@@ -142,12 +134,6 @@ impl Plugin for LauncherPlugin {
 
         app.add_plugins(ServerPlugin);
         app.add_plugins(ClientPlugin);
-
-        // NOTE: Just for testing, lock cursor on left click and unlock on escape
-        app.add_systems(
-            Update,
-            (lock_on_left_click, unlock_on_escape).run_if(in_state(LauncherStates::Playing)),
-        );
     }
 }
 
@@ -427,43 +413,9 @@ fn setup_controller(mut commands: Commands, mut ev_spawn: EventWriter<ClientSpaw
     ev_spawn.write(ClientSpawnPlayerEvent);
 
     commands.spawn((
-        HeadCameraControllerBundle::default(),
-        Camera3d::default(),
-        Transform::from_xyz(60.0, 60.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
-        Name::new("Head Camera"),
-        StateScoped(LauncherStates::Playing),
-    ));
-
-    commands.spawn((
         DirectionalLight::default(),
         Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
         Name::new("Directional Light"),
         StateScoped(LauncherStates::Playing),
     ));
-}
-
-// Mouse lock just for now
-
-fn lock_on_left_click(
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-) {
-    if mouse.just_pressed(MouseButton::Left) {
-        if let Ok(mut window) = windows.single_mut() {
-            window.cursor_options.grab_mode = CursorGrabMode::Locked;
-            window.cursor_options.visible = false;
-        }
-    }
-}
-
-fn unlock_on_escape(
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
-    keys: Res<ButtonInput<KeyCode>>,
-) {
-    if keys.just_pressed(KeyCode::Escape) {
-        if let Ok(mut window) = windows.single_mut() {
-            window.cursor_options.grab_mode = CursorGrabMode::None;
-            window.cursor_options.visible = true;
-        }
-    }
 }

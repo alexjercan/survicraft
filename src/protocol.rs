@@ -1,8 +1,6 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use leafwing_input_manager::prelude::*;
 use lightyear::connection::host::HostClient;
-use lightyear::input::{config::InputConfig, leafwing::prelude::*};
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -23,17 +21,6 @@ pub const SERVER_REPLICATION_INTERVAL: Duration = Duration::from_millis(100);
 pub const SERVER_PORT: u16 = 5555;
 pub const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), SERVER_PORT);
 
-// --- Input ---
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash, Reflect, Actionlike)]
-pub enum CharacterAction {
-    #[actionlike(DualAxis)]
-    Move,
-    Jump,
-    #[actionlike(DualAxis)]
-    Look,
-}
-
 // --- Components ---
 
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Reflect)]
@@ -43,9 +30,6 @@ pub struct PlayerId(pub PeerId);
 pub struct PlayerMetadata {
     pub username: String,
 }
-
-#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-pub struct PlayerCharacter;
 
 // --- Messages ---
 
@@ -95,17 +79,8 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-        // Input handling
-        app.add_plugins(InputPlugin::<CharacterAction> {
-            config: InputConfig::<CharacterAction> {
-                rebroadcast_inputs: true,
-                ..default()
-            },
-        });
-
         // Components for player
         app.register_type::<PlayerId>()
-            .register_type::<PlayerCharacter>()
             .register_type::<PlayerMetadata>();
 
         app.register_component::<Name>()
@@ -117,10 +92,6 @@ impl Plugin for ProtocolPlugin {
             .add_interpolation(InterpolationMode::Once);
 
         app.register_component::<PlayerMetadata>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
-        app.register_component::<PlayerCharacter>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 

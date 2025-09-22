@@ -1,10 +1,12 @@
 //! TODO: Document this module
 
+// NOTE: I know... using avian3d just for Rotation... but it is convenient
+use avian3d::prelude::*;
 use bevy::prelude::*;
 
 /// The Head camera component, which allows for mouse look.
-#[derive(Component, Clone, Copy, Debug)]
-pub struct HeadCamera {
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+pub struct HeadController {
     /// The look sensitivity of the camera
     pub look_sensitivity: f32,
     /// The offset of the camera from the object it is following
@@ -15,7 +17,7 @@ pub struct HeadCamera {
     pub max_pitch: f32,
 }
 
-impl Default for HeadCamera {
+impl Default for HeadController {
     fn default() -> Self {
         Self {
             look_sensitivity: 0.0025,
@@ -28,44 +30,57 @@ impl Default for HeadCamera {
 
 /// The input component for the Head camera, which stores the current input state.
 /// This component should be updated by user input systems to control the camera.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct HeadCameraInput {
-    pub move_axis: Vec2,
-    pub free_look: bool,
+#[derive(Component, Clone, Copy, Debug, Default, Reflect)]
+pub struct HeadControllerInput {
+    pub look_axis: Vec2,
 }
 
 /// Target for the Head camera to follow.
-#[derive(Component, Clone, Copy, Debug)]
-pub struct HeadCameraTarget;
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Reflect)]
+pub struct HeadControllerTarget(pub Entity);
 
-pub struct HeadCameraPlugin;
+pub struct HeadControllerPlugin;
 
-impl Plugin for HeadCameraPlugin {
+impl Plugin for HeadControllerPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<HeadController>()
+            .register_type::<HeadControllerInput>()
+            .register_type::<HeadControllerTarget>();
+
         app.add_systems(Update, sync_transform);
     }
 }
 
 fn sync_transform(
-    mut q_camera: Query<(&mut Transform, &HeadCameraInput, &HeadCamera)>,
-    target: Single<&GlobalTransform, With<HeadCameraTarget>>,
+    mut q_camera: Query<(
+        &mut Transform,
+        &mut Rotation,
+        &HeadControllerInput,
+        &HeadController,
+        &HeadControllerTarget,
+    )>,
+    q_target: Query<&GlobalTransform, Without<HeadController>>,
 ) {
-    let target_transform = target.into_inner();
+    for (mut transform, mut rotation, input, camera, &HeadControllerTarget(target)) in q_camera.iter_mut() {
+        let target_transform = match q_target.get(target) {
+            Ok(t) => t,
+            Err(_) => {
+                warn!("HeadControllerTarget entity {target:?} does not have a GlobalTransform");
+                continue;
+            }
+        };
 
-    for (mut transform, input, camera) in q_camera.iter_mut() {
-        let pitch_delta = -input.move_axis.y * camera.look_sensitivity;
+        let pitch_delta = -input.look_axis.y * camera.look_sensitivity;
         let (_, current_pitch, _) = transform.rotation.to_euler(EulerRot::YXZ);
         let new_pitch = (current_pitch + pitch_delta).clamp(camera.min_pitch, camera.max_pitch);
-        let (target_yaw, _, _) = target_transform.rotation().to_euler(EulerRot::YXZ);
 
-        if input.free_look {
-            let yaw_delta = -input.move_axis.x * camera.look_sensitivity;
-            let new_yaw = target_yaw + yaw_delta;
-            transform.rotation = Quat::from_euler(EulerRot::YXZ, new_yaw, new_pitch, 0.0);
-        } else {
-            transform.rotation = Quat::from_euler(EulerRot::YXZ, target_yaw, new_pitch, 0.0);
-        }
+        let yaw_delta = -input.look_axis.x * camera.look_sensitivity;
+        let (target_yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
+        let new_yaw = target_yaw + yaw_delta;
 
+        rotation.0 = Quat::from_euler(EulerRot::YXZ, new_yaw, new_pitch, 0.0);
+
+        transform.rotation = rotation.0;
         transform.translation = target_transform.translation() + camera.offset;
     }
 }

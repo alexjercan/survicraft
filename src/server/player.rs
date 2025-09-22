@@ -1,6 +1,6 @@
 //! The player plugin handles the server side player logic.
 
-use crate::protocol::prelude::*;
+use crate::{protocol::prelude::*, common::prelude::*};
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -17,7 +17,7 @@ impl Plugin for PlayerPlugin {
 fn handle_spawn_player(
     mut commands: Commands,
     mut q_receiver: Query<(Entity, &RemoteId, &mut MessageReceiver<ClientSpawnRequest>)>,
-    q_player: Query<(Entity, &PlayerId), With<PlayerCharacter>>,
+    q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
 ) {
     for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
         for _ in receiver.receive() {
@@ -35,14 +35,14 @@ fn handle_spawn_player(
                 PlayerId(*peer),
                 Name::new("Player"),
                 ActionState::<CharacterAction>::default(),
-                Position(Vec3::new(0.0, 3.0, 0.0)), // TODO: Make sure the position is valid
+                Position(Vec3::new(0.0, 3.0, 0.0)),
                 Replicate::to_clients(NetworkTarget::All),
                 PredictionTarget::to_clients(NetworkTarget::All),
                 ControlledBy {
                     owner: entity,
                     lifetime: Lifetime::default(),
                 },
-                PlayerCharacter,
+                PlayerController,
             ));
         }
     }
