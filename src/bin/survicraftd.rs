@@ -11,6 +11,6 @@ fn main() {
     let _ = Cli::parse();
 
     let mut app = new_headless_app();
-    app.add_plugins(DedicatedServerPlugin);
+    app.add_plugins(LauncherPlugin { render: false });
     app.run();
 }

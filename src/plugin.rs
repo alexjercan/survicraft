@@ -28,15 +28,40 @@ enum LauncherMode {
     Client(String), // Server address
     #[default]
     Host,
+    Dedicated,
 }
 
 pub struct LauncherPlugin {
     pub render: bool,
 }
 
+impl LauncherPlugin {
+    fn is_dedicated_server(&self, app: &App) -> bool {
+        app.is_plugin_added::<DedicatedServerPlugin>()
+    }
+}
+
 impl Plugin for LauncherPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(LauncherMode::default());
+        let dedicated = self.is_dedicated_server(app);
+        if dedicated && self.render {
+            warn!("Dedicated server mode with rendering enabled. This is unusual.");
+        }
+
+        info!(
+            "Launcher mode: {}",
+            if dedicated {
+                "Dedicated Server"
+            } else {
+                "Client/Host"
+            }
+        );
+
+        if !dedicated {
+            app.insert_resource(LauncherMode::default());
+        } else {
+            app.insert_resource(LauncherMode::Dedicated);
+        }
 
         // Initialize the state machine
         app.init_state::<LauncherStates>();
@@ -46,15 +71,29 @@ impl Plugin for LauncherPlugin {
         // but we will control which ones are active using states and conditions. In case
         // the player is hosting, both client and server will be active. In case the player
         // is joining, only the client will be active.
-        app.add_plugins(ClientPlugins {
-            tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
-        });
+        if !dedicated {
+            app.add_plugins(ClientPlugins {
+                tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
+            });
+        }
         app.add_plugins(ServerPlugins {
             tick_duration: Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ),
         });
 
+        // Utility plugins. Text input plugin for handling text fields.
+        if !dedicated {
+            app.add_plugins(TextInputPlugin);
+        }
+
         // Protocol plugin for handling message serialization and deserialization.
         app.add_plugins(ProtocolPlugin);
+
+        // Progress tracking plugin.
+        app.add_plugins(
+            ProgressPlugin::<LauncherStates>::new()
+                .with_state_transition(LauncherStates::Connecting, LauncherStates::Generating)
+                .with_state_transition(LauncherStates::Generating, LauncherStates::Playing),
+        );
 
         // Asset loading. This will transition from Loading to MainMenu state once done.
         app.add_systems(OnEnter(LauncherStates::Loading), setup_terrain_assets);
@@ -66,29 +105,30 @@ impl Plugin for LauncherPlugin {
                 .load_collection::<MainMenuAssets>(),
         );
 
-        // Utility plugins. Text input plugin for handling text fields.
-        app.add_plugins(TextInputPlugin);
-
         // Main Menu setup and event handling for starting the game.
-        app.add_systems(OnEnter(LauncherStates::MainMenu), setup_menu);
-        app.add_plugins(MainMenuPlugin);
-        app.add_systems(
-            Update,
-            (handle_play_button_pressed, handle_multiplayer_pressed)
-                .run_if(in_state(LauncherStates::MainMenu)),
-        );
-
-        app.add_plugins(
-            ProgressPlugin::<LauncherStates>::new()
-                .with_state_transition(LauncherStates::Connecting, LauncherStates::Generating)
-                .with_state_transition(LauncherStates::Generating, LauncherStates::Playing),
-        );
+        if !dedicated {
+            app.add_systems(OnEnter(LauncherStates::MainMenu), setup_menu);
+            app.add_plugins(MainMenuPlugin);
+            app.add_systems(
+                Update,
+                (handle_play_button_pressed, handle_multiplayer_pressed)
+                    .run_if(in_state(LauncherStates::MainMenu)),
+            );
+        } else {
+            // If we are a dedicated server, skip the menu and go straight to connecting
+            app.add_systems(
+                OnEnter(LauncherStates::MainMenu),
+                |mut next_state: ResMut<NextState<LauncherStates>>| {
+                    next_state.set(LauncherStates::Connecting);
+                },
+            );
+        }
 
         // Create connections when entering the Connecting state.
-        app.add_systems(
-            OnEnter(LauncherStates::Connecting),
-            (setup_connecting_ui, setup_connections),
-        );
+        if !dedicated {
+            app.add_systems(OnEnter(LauncherStates::Connecting), setup_connecting_ui);
+        }
+        app.add_systems(OnEnter(LauncherStates::Connecting), setup_connections);
         app.add_systems(
             Update,
             check_connection_progress
@@ -97,11 +137,18 @@ impl Plugin for LauncherPlugin {
         );
 
         // Terrain generation setup and progress tracking.
-        app.add_plugins(TerrainGenerationPlugin { render: self.render });
-        app.add_plugins(FeaturesGenerationPlugin { render: self.render });
+        app.add_plugins(TerrainGenerationPlugin {
+            render: self.render,
+        });
+        app.add_plugins(FeaturesGenerationPlugin {
+            render: self.render,
+        });
+        if !dedicated {
+            app.add_systems(OnEnter(LauncherStates::Generating), setup_loading_ui);
+        }
         app.add_systems(
             OnEnter(LauncherStates::Generating),
-            (setup_loading_ui, setup_terrain_generation),
+            setup_terrain_generation,
         );
         app.add_systems(
             Update,
@@ -122,20 +169,34 @@ impl Plugin for LauncherPlugin {
                 .disable::<SleepingPlugin>(),
         );
 
-        // Chat setup. We set up chat UI and related systems.
-        app.add_systems(OnEnter(LauncherStates::Playing), setup_chat);
-        app.add_plugins(ChatPlugin);
+        app.add_systems(OnEnter(LauncherStates::Playing), || {
+            info!("Entered Playing state...");
+        });
+
+        if !dedicated {
+            // Chat setup. We set up chat UI and related systems.
+            app.add_systems(OnEnter(LauncherStates::Playing), setup_chat);
+            app.add_plugins(ChatPlugin);
+        }
 
         // The head camera controller will run only in the Playing state
-        app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
-        app.add_plugins(PlayerControllerPlugin { render: self.render });
+        if !dedicated {
+            app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
+        }
+        app.add_plugins(PlayerControllerPlugin {
+            render: self.render,
+        });
 
-        app.add_plugins(CommonRendererPlugin);
+        // if self.render {
+        //     app.add_plugins(CommonRendererPlugin);
+        // }
 
         // --- Client and Server plugins below here ---
 
+        if !dedicated {
+            app.add_plugins(ClientPlugin);
+        }
         app.add_plugins(ServerPlugin);
-        app.add_plugins(ClientPlugin);
     }
 }
 
@@ -233,14 +294,30 @@ fn setup_connections(mut commands: Commands, mode: Res<LauncherMode>) {
                 StateScoped(LauncherStates::Playing),
             ));
         }
+        LauncherMode::Dedicated => {
+            commands.spawn((
+                Name::new("ServerListener"),
+                ServerListener,
+                StateScoped(LauncherStates::Playing),
+            ));
+        }
     }
 }
 
-fn check_connection_progress(client_ready: Res<ClientNetworkStateReady>) -> Progress {
-    let done = if **client_ready { 1 } else { 0 };
-    debug!("Connection progress: {}/1", done);
+fn check_connection_progress(client_ready: Option<Res<ClientNetworkStateReady>>) -> Progress {
+    match client_ready {
+        None => {
+            debug!("Connection progress: 1/1 (dedicated server)");
 
-    Progress { done, total: 1 }
+            Progress { done: 1, total: 1 }
+        }
+        Some(client_ready) => {
+            let done = if **client_ready { 1 } else { 0 };
+            debug!("Connection progress: {}/1", done);
+
+            Progress { done, total: 1 }
+        }
+    }
 }
 
 fn setup_loading_ui() {

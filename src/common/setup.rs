@@ -71,6 +71,7 @@ pub fn new_headless_app() -> App {
             .set(log_plugin())
             .disable::<WinitPlugin>(),
         ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ)),
+        DedicatedServerPlugin,
     ));
 
     #[cfg(feature = "debug")]
@@ -102,6 +103,12 @@ fn unlock_on_escape(
             window.cursor_options.visible = true;
         }
     }
+}
+
+pub struct DedicatedServerPlugin;
+
+impl Plugin for DedicatedServerPlugin {
+    fn build(&self, _: &mut App) {}
 }
 
 #[cfg(feature = "debug")]

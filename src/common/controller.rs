@@ -96,7 +96,7 @@ fn on_add_player_controller(
                 InputMap::default()
                     .with_dual_axis(HeadAction::Look, GamepadStick::RIGHT)
                     .with_dual_axis(HeadAction::Look, MouseMove::default()),
-                Camera3d::default(),
+                Camera3d::default(), // NOTE: Careful when self.render = false
                 HeadController {
                     offset: Vec3::new(0.0, CHARACTER_CAPSULE_HEIGHT / 2.0, 0.0),
                     ..default()
@@ -163,6 +163,7 @@ fn sync_character_rotation(
         let (_, mut target_rotation) = match q_player.get_mut(target) {
             Ok(r) => r,
             Err(_) => {
+                warn!("HeadControllerTarget entity {target:?} does not have a Rotation");
                 continue;
             }
         };
