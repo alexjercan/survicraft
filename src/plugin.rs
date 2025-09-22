@@ -187,9 +187,9 @@ impl Plugin for LauncherPlugin {
             render: self.render,
         });
 
-        // if self.render {
-        //     app.add_plugins(CommonRendererPlugin);
-        // }
+        if self.render {
+            app.add_plugins(CommonRendererPlugin);
+        }
 
         // --- Client and Server plugins below here ---
 

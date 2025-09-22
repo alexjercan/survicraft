@@ -54,9 +54,9 @@ impl Plugin for PlayerControllerPlugin {
                 add_head_controller_to_new_players,
                 update_character_input,
                 update_head_input,
-                sync_character_rotation,
             ),
         );
+        app.add_systems(FixedUpdate, sync_character_rotation);
     }
 }
 
@@ -182,7 +182,7 @@ impl Plugin for PlayerRenderPlugin {
 }
 
 fn handle_render_player(
-    q_player: Query<(Entity, Has<Controlled>), Added<PlayerController>>,
+    q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerController>)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
