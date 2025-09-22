@@ -156,11 +156,11 @@ fn update_head_input(mut q_head: Query<(&mut HeadControllerInput, &ActionState<H
 }
 
 fn sync_character_rotation(
-    mut q_player: Query<(Entity, &mut Rotation), With<PlayerController>>,
+    mut q_player: Query<&mut Rotation, With<PlayerController>>,
     q_head: Query<(&Rotation, &HeadControllerTarget), Without<PlayerController>>,
 ) {
     for (rotation, &HeadControllerTarget(target)) in q_head.iter() {
-        let (_, mut target_rotation) = match q_player.get_mut(target) {
+        let mut target_rotation = match q_player.get_mut(target) {
             Ok(r) => r,
             Err(_) => {
                 warn!("HeadControllerTarget entity {target:?} does not have a Rotation");
