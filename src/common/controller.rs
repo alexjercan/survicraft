@@ -135,7 +135,7 @@ fn add_head_controller_to_new_players(
             }
         };
 
-        debug!("Linking head controller {entity:?} to player entity {player:?}");
+        trace!("Linking head controller {entity:?} to player entity {player:?}");
         commands.entity(entity).insert(HeadControllerTarget(player));
     }
 }
@@ -163,7 +163,6 @@ fn sync_character_rotation(
         let (_, mut target_rotation) = match q_player.get_mut(target) {
             Ok(r) => r,
             Err(_) => {
-                warn!("HeadControllerTarget entity {target:?} does not have a Rotation");
                 continue;
             }
         };
@@ -182,12 +181,16 @@ impl Plugin for PlayerRenderPlugin {
 }
 
 fn handle_render_player(
-    q_player: Query<Entity, Added<PlayerController>>,
+    q_player: Query<(Entity, Has<Controlled>), Added<PlayerController>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for entity in q_player.iter() {
+    for (entity, is_controlled) in q_player.iter() {
+        if is_controlled {
+            // NOTE: we don't render the local player character since the camera is inside it
+            continue;
+        }
         debug!("Rendering player entity {entity:?}");
 
         commands.entity(entity).insert((

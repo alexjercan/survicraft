@@ -30,7 +30,9 @@ enum LauncherMode {
     Host,
 }
 
-pub struct LauncherPlugin;
+pub struct LauncherPlugin {
+    pub render: bool,
+}
 
 impl Plugin for LauncherPlugin {
     fn build(&self, app: &mut App) {
@@ -95,8 +97,8 @@ impl Plugin for LauncherPlugin {
         );
 
         // Terrain generation setup and progress tracking.
-        app.add_plugins(TerrainGenerationPlugin { render: true });
-        app.add_plugins(FeaturesGenerationPlugin { render: true });
+        app.add_plugins(TerrainGenerationPlugin { render: self.render });
+        app.add_plugins(FeaturesGenerationPlugin { render: self.render });
         app.add_systems(
             OnEnter(LauncherStates::Generating),
             (setup_loading_ui, setup_terrain_generation),
@@ -126,7 +128,7 @@ impl Plugin for LauncherPlugin {
 
         // The head camera controller will run only in the Playing state
         app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
-        app.add_plugins(PlayerControllerPlugin { render: true });
+        app.add_plugins(PlayerControllerPlugin { render: self.render });
 
         app.add_plugins(CommonRendererPlugin);
 

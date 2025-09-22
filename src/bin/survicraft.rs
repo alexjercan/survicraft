@@ -11,6 +11,6 @@ fn main() {
     let _ = Cli::parse();
 
     let mut app = new_gui_app();
-    app.add_plugins(LauncherPlugin);
+    app.add_plugins(LauncherPlugin { render: true });
     app.run();
 }
