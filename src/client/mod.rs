@@ -5,9 +5,11 @@ mod player;
 use bevy::prelude::*;
 
 pub mod prelude {
-    pub use super::network::{ClientConnection, PlayerNameSetting, ClientNetworkStateReady, HostConnection};
-    pub use super::ClientPlugin;
+    pub use super::network::{
+        ClientConnection, ClientNetworkStateReady, HostConnection, PlayerNameSetting,
+    };
     pub use super::player::ClientSpawnPlayerEvent;
+    pub use super::ClientPlugin;
 }
 
 pub struct ClientPlugin;

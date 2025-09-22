@@ -7,9 +7,7 @@ use bevy_simple_text_input::*;
 use leafwing_input_manager::prelude::*;
 
 pub mod prelude {
-    pub use super::{
-        AddChatHistoryItemEvent, ChatMenuRoot, ChatMessageSubmittedEvent, ChatPlugin,
-    };
+    pub use super::{AddChatHistoryItemEvent, ChatMenuRoot, ChatMessageSubmittedEvent, ChatPlugin};
 }
 
 const BORDER_COLOR: Color = Color::srgba(0.25, 0.25, 0.25, 0.25);
@@ -83,7 +81,7 @@ impl Plugin for ChatPlugin {
                     handle_chat_input_action,
                 )
                     .chain(),
-            )
+            ),
         );
     }
 }

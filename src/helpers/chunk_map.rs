@@ -58,10 +58,7 @@ where
     fn build(&self, app: &mut App) {
         app.insert_resource(self.func.clone());
 
-        app.add_systems(
-            Update,
-            (create_task::<T, U, F>, handle_task::<U>),
-        );
+        app.add_systems(Update, (create_task::<T, U, F>, handle_task::<U>));
     }
 }
 

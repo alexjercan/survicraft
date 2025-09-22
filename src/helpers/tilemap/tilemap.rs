@@ -49,7 +49,7 @@ pub struct TileDiscoverEvent {
 impl TileDiscoverEvent {
     /// Creates a new TileDiscoverEvent with the specified position.
     pub fn new(pos: Vec2, radius: u32) -> Self {
-        Self { pos , radius }
+        Self { pos, radius }
     }
 }
 

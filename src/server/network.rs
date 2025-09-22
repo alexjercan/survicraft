@@ -72,7 +72,10 @@ fn on_new_connection(
 
     let entity = trigger.target();
     let RemoteId(peer) = q_connected.get(entity)?;
-    let welcome = ServerWelcomeEvent { peer: *peer, seed: **world_seed };
+    let welcome = ServerWelcomeEvent {
+        peer: *peer,
+        seed: **world_seed,
+    };
     debug!("Sending welcome message to {:?}: {:?}", peer, welcome);
 
     ev_welcome.write(welcome);

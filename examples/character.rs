@@ -17,10 +17,7 @@ fn main() {
     let mut app = new_gui_app();
 
     // Setup the physics plugins for the character controller example
-    app.add_plugins(
-        PhysicsPlugins::default()
-            .build()
-    );
+    app.add_plugins(PhysicsPlugins::default().build());
 
     app.add_systems(Startup, setup);
     app.add_plugins(PlayerControllerPlugin { render: true });
@@ -74,7 +71,14 @@ impl Plugin for PlayerControllerPlugin {
 
         app.add_observer(on_add_player_controller);
 
-        app.add_systems(Update, (update_character_input, update_head_input, sync_character_rotation));
+        app.add_systems(
+            Update,
+            (
+                update_character_input,
+                update_head_input,
+                sync_character_rotation,
+            ),
+        );
     }
 }
 

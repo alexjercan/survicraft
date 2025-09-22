@@ -74,10 +74,7 @@ impl Plugin for FeaturesGenerationPlugin {
     }
 }
 
-fn update_features_map(
-    features: Res<FeatureAssets>,
-    mut planet_features: ResMut<PlanetFeatures>,
-) {
+fn update_features_map(features: Res<FeatureAssets>, mut planet_features: ResMut<PlanetFeatures>) {
     planet_features.map = features.clone();
 }
 

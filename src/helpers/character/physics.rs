@@ -167,9 +167,7 @@ mod debug {
         }
     }
 
-    fn log_player_character_state(
-        q_player: Query<CharacterQuery, With<PhysicsCharacterInput>>,
-    ) {
+    fn log_player_character_state(q_player: Query<CharacterQuery, With<PhysicsCharacterInput>>) {
         for character in &q_player {
             trace!(
                 "PlayerController {:?}: ExternalForce={:?}, ExternalImpulse={:?}, LinearVelocity={:?}, Mass={:?}, Position={:?}, Rotation={:?}",

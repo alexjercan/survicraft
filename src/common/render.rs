@@ -1,6 +1,9 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
-use lightyear::{frame_interpolation::{FrameInterpolate, FrameInterpolationPlugin}, prelude::*};
+use lightyear::{
+    frame_interpolation::{FrameInterpolate, FrameInterpolationPlugin},
+    prelude::*,
+};
 
 pub struct CommonRendererPlugin;
 

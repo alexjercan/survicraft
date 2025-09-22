@@ -61,7 +61,9 @@ fn sync_transform(
     )>,
     q_target: Query<&GlobalTransform, Without<HeadController>>,
 ) {
-    for (mut transform, mut rotation, input, camera, &HeadControllerTarget(target)) in q_camera.iter_mut() {
+    for (mut transform, mut rotation, input, camera, &HeadControllerTarget(target)) in
+        q_camera.iter_mut()
+    {
         let target_transform = match q_target.get(target) {
             Ok(t) => t,
             Err(_) => {
