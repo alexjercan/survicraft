@@ -10,6 +10,7 @@ use lightyear::{
         *,
     },
 };
+use serde::{Deserialize, Serialize};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     time::Duration,
@@ -41,6 +42,16 @@ fn main() {
     }
 
     app.add_plugins(ProtocolPlugin);
+    app.register_component::<FloorMarker>()
+        .add_prediction(PredictionMode::Once)
+        .add_interpolation(InterpolationMode::Once);
+    app.register_component::<WallMarker>()
+        .add_prediction(PredictionMode::Once)
+        .add_interpolation(InterpolationMode::Once);
+    app.register_component::<CubeMarker>()
+        .add_prediction(PredictionMode::Once)
+        .add_interpolation(InterpolationMode::Once);
+
     app.add_plugins(CommonRendererPlugin);
     app.add_plugins(
         PhysicsPlugins::default()
@@ -55,12 +66,16 @@ fn main() {
 
     app.add_plugins(PlayerControllerPlugin { render: true });
 
-    app.add_systems(Startup, setup_world);
+    app.add_systems(Startup, setup_render);
     if is_host {
+        app.add_systems(Startup, setup_world);
         app.add_systems(Startup, setup_server);
     } else {
         app.add_systems(Startup, setup_client);
+        app.add_systems(Update, (add_floor_to_client, add_wall_to_client, add_cube_to_client));
     }
+    app.add_systems(Update, (add_floor_cosmetic, add_wall_cosmetic, add_cube_cosmetic));
+
     if is_host {
         app.add_observer(on_new_client);
         app.add_observer(on_new_connection);
@@ -69,41 +84,128 @@ fn main() {
     app.run();
 }
 
-fn setup_world(
+#[derive(Serialize, Deserialize, Component, Debug, Clone, PartialEq, Eq)]
+struct FloorMarker;
+
+#[derive(Serialize, Deserialize, Component, Debug, Clone, PartialEq, Eq)]
+struct WallMarker;
+
+#[derive(Serialize, Deserialize, Component, Debug, Clone, PartialEq, Eq)]
+struct CubeMarker;
+
+fn add_floor_cosmetic(
     mut commands: Commands,
+    q_floor: Query<Entity, (With<FloorMarker>, Without<Mesh3d>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    for entity in q_floor.iter() {
+        commands.entity(entity).insert((
+            Mesh3d(meshes.add(Cuboid::new(20.0, 1.0, 20.0))),
+            MeshMaterial3d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
+        ));
+    }
+}
+
+fn add_floor_to_client(
+    mut commands: Commands,
+    q_floor: Query<Entity, (With<FloorMarker>, Without<Collider>)>,
+) {
+    for entity in q_floor.iter() {
+        commands.entity(entity).insert((
+            Collider::cuboid(20.0, 1.0, 20.0),
+            RigidBody::Static,
+        ));
+    }
+}
+
+fn add_wall_cosmetic(
+    mut commands: Commands,
+    q_wall: Query<Entity, (With<WallMarker>, Without<Mesh3d>)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let wall_thickness = 1.0;
+    let wall_height = 10.0;
+    let wall_length = 20.0 * 2.0 + wall_thickness * 2.0;
+    let wall_color = Color::srgb(0.4, 0.4, 0.4);
+    let wall_material = materials.add(StandardMaterial {
+        base_color: wall_color,
+        ..default()
+    });
+    for entity in q_wall.iter() {
+        commands.entity(entity).insert((
+            Mesh3d(meshes.add(Cuboid::new(wall_thickness, wall_height, wall_length))),
+            MeshMaterial3d(wall_material.clone()),
+        ));
+    }
+}
+
+fn add_wall_to_client(
+    mut commands: Commands,
+    q_wall: Query<Entity, (With<WallMarker>, Without<Collider>)>,
+) {
+    let wall_thickness = 1.0;
+    let wall_height = 10.0;
+    let wall_length = 20.0 * 2.0 + wall_thickness * 2.0;
+    for entity in q_wall.iter() {
+        commands.entity(entity).insert((
+            Collider::cuboid(wall_thickness, wall_height, wall_length),
+            RigidBody::Static,
+        ));
+    }
+}
+
+fn add_cube_to_client(
+    mut commands: Commands,
+    q_cube: Query<Entity, (With<CubeMarker>, Without<Collider>)>,
+) {
+    for entity in q_cube.iter() {
+        commands.entity(entity).insert((
+            Collider::cuboid(0.5, 0.5, 0.5),
+            RigidBody::Dynamic,
+        ));
+    }
+}
+
+fn add_cube_cosmetic(
+    mut commands: Commands,
+    q_cube: Query<Entity, (Or<(Added<Predicted>, Added<Replicate>)>, With<CubeMarker>, Without<Mesh3d>)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    for entity in q_cube.iter() {
+        commands.entity(entity).insert((
+            Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
+            MeshMaterial3d(materials.add(Color::srgb(0.8, 0.2, 0.2))),
+        ));
+    }
+}
+
+fn setup_render(mut commands: Commands) {
     commands.spawn((
         DirectionalLight::default(),
         Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
         Name::new("Directional Light"),
     ));
+}
 
-    commands.spawn((
-        PlayerController,
-        Transform::from_xyz(0.0, 3.0, 0.0),
-        Name::new("Player Character"),
-        Position(Vec3::new(0.0, 3.0, 0.0)),
-        Rotation::default(),
-        PhysicsCharacterBundle::default(),
-        PhysicsCharacterInput::default(),
-    ));
-
+fn setup_world(mut commands: Commands) {
     const FLOOR_WIDTH: f32 = 20.0;
     const FLOOR_HEIGHT: f32 = 1.0;
 
     commands.spawn((
         Name::new("Floor"),
+        FloorMarker,
         Collider::cuboid(FLOOR_WIDTH, FLOOR_HEIGHT, FLOOR_WIDTH),
         RigidBody::Static,
         Position::new(Vec3::ZERO),
-        Mesh3d(meshes.add(Cuboid::new(FLOOR_WIDTH, FLOOR_HEIGHT, FLOOR_WIDTH))),
-        MeshMaterial3d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
+        Replicate::to_clients(NetworkTarget::All),
     ));
 
     commands.spawn((
         Name::new("Ramp"),
+        FloorMarker,
         Collider::cuboid(FLOOR_WIDTH, FLOOR_HEIGHT, FLOOR_WIDTH),
         RigidBody::Static,
         Position::new(Vec3::new(
@@ -117,20 +219,20 @@ fn setup_world(
             0.0,
             -std::f32::consts::FRAC_PI_4,
         ))),
-        Mesh3d(meshes.add(Cuboid::new(FLOOR_WIDTH, FLOOR_HEIGHT, FLOOR_WIDTH))),
-        MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
+        Replicate::to_clients(NetworkTarget::All),
     ));
 
-    // for i in 0..5 {
-    //     commands.spawn((
-    //         Name::new(format!("Cube {i}")),
-    //         Collider::cuboid(0.5, 0.5, 0.5),
-    //         RigidBody::Dynamic,
-    //         Position::new(Vec3::new(i as f32 - 2.0, 5.0 + i as f32, 0.0)),
-    //         Mesh3d(meshes.add(Cuboid::new(0.5, 0.5, 0.5))),
-    //         MeshMaterial3d(materials.add(Color::srgb(0.8, 0.2, 0.2))),
-    //     ));
-    // }
+    for i in 0..5 {
+        commands.spawn((
+            Name::new(format!("Cube {i}")),
+            CubeMarker,
+            Collider::cuboid(0.5, 0.5, 0.5),
+            RigidBody::Dynamic,
+            Position::new(Vec3::new(i as f32 - 2.0, 5.0 + i as f32, 0.0)),
+            Replicate::to_clients(NetworkTarget::All),
+            PredictionTarget::to_clients(NetworkTarget::All),
+        ));
+    }
 
     // for i in 0..5 {
     //     commands.spawn((
@@ -146,13 +248,9 @@ fn setup_world(
     let wall_thickness = 1.0;
     let wall_height = 10.0;
     let wall_length = FLOOR_WIDTH * 2.0 + wall_thickness * 2.0;
-    let wall_color = Color::srgb(0.4, 0.4, 0.4);
-    let wall_material = materials.add(StandardMaterial {
-        base_color: wall_color,
-        ..default()
-    });
     commands.spawn((
         Name::new("Wall +X"),
+        WallMarker,
         Collider::cuboid(wall_thickness, wall_height, wall_length),
         RigidBody::Static,
         Position::new(Vec3::new(
@@ -160,11 +258,12 @@ fn setup_world(
             wall_height / 2.0,
             0.0,
         )),
-        Mesh3d(meshes.add(Cuboid::new(wall_thickness, wall_height, wall_length))),
-        MeshMaterial3d(wall_material.clone()),
+        Rotation::default(),
+        Replicate::to_clients(NetworkTarget::All),
     ));
     commands.spawn((
         Name::new("Wall -X"),
+        WallMarker,
         Collider::cuboid(wall_thickness, wall_height, wall_length),
         RigidBody::Static,
         Position::new(Vec3::new(
@@ -172,32 +271,44 @@ fn setup_world(
             wall_height / 2.0,
             0.0,
         )),
-        Mesh3d(meshes.add(Cuboid::new(wall_thickness, wall_height, wall_length))),
-        MeshMaterial3d(wall_material.clone()),
+        Rotation::default(),
+        Replicate::to_clients(NetworkTarget::All),
     ));
     commands.spawn((
         Name::new("Wall +Z"),
-        Collider::cuboid(wall_length, wall_height, wall_thickness),
+        WallMarker,
+        Collider::cuboid(wall_thickness, wall_height, wall_length),
         RigidBody::Static,
         Position::new(Vec3::new(
             0.0,
             wall_height / 2.0,
             FLOOR_WIDTH / 2.0 + wall_thickness,
         )),
-        Mesh3d(meshes.add(Cuboid::new(wall_length, wall_height, wall_thickness))),
-        MeshMaterial3d(wall_material.clone()),
+        Rotation::from(Quat::from_euler(
+            EulerRot::XYZ,
+            0.0,
+            std::f32::consts::FRAC_PI_2,
+            0.0,
+        )),
+        Replicate::to_clients(NetworkTarget::All),
     ));
     commands.spawn((
         Name::new("Wall -Z"),
-        Collider::cuboid(wall_length, wall_height, wall_thickness),
+        WallMarker,
+        Collider::cuboid(wall_thickness, wall_height, wall_length),
         RigidBody::Static,
         Position::new(Vec3::new(
             0.0,
             wall_height / 2.0,
             -FLOOR_WIDTH / 2.0 - wall_thickness,
         )),
-        Mesh3d(meshes.add(Cuboid::new(wall_length, wall_height, wall_thickness))),
-        MeshMaterial3d(wall_material),
+        Rotation::from(Quat::from_euler(
+            EulerRot::XYZ,
+            0.0,
+            std::f32::consts::FRAC_PI_2,
+            0.0,
+        )),
+        Replicate::to_clients(NetworkTarget::All),
     ));
 }
 
