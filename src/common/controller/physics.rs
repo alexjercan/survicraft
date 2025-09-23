@@ -1,18 +1,13 @@
-use crate::{common::prelude::*, protocol::prelude::*};
+use crate::common::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
-use lightyear::input::{config::InputConfig, leafwing::prelude::*};
-use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Marker component for the player character entity. Spawn this when you
 /// want to attach a player bundle and have it be controlled by a player.
-#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PlayerController;
-
-#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-struct HeadControllerMarker;
 
 pub struct PlayerControllerPlugin {
     pub render: bool,
@@ -20,43 +15,26 @@ pub struct PlayerControllerPlugin {
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<PlayerController>();
-
-        // Register the player controller for networking
-        app.register_component::<PlayerController>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
-        app.register_component::<HeadControllerMarker>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
         app.add_plugins(PhysicsCharacterPlugin);
         app.add_plugins(HeadControllerPlugin);
 
-        // Add input handling for network rebroadcasting
-        app.add_plugins(InputPlugin::<CharacterAction> {
-            config: InputConfig::<CharacterAction> {
-                rebroadcast_inputs: true,
-                ..default()
-            },
-        });
+        app.add_plugins(InputManagerPlugin::<CharacterAction>::default());
         app.add_plugins(InputManagerPlugin::<HeadAction>::default());
 
         if self.render {
             app.add_plugins(PlayerRenderPlugin);
         }
 
+        app.add_observer(on_add_player_controller);
+
         app.add_systems(
             Update,
             (
-                on_add_player_controller,
-                add_head_controller_to_new_players,
                 update_character_input,
                 update_head_input,
+                sync_character_rotation,
             ),
         );
-        app.add_systems(FixedUpdate, sync_character_rotation);
     }
 }
 
@@ -73,71 +51,31 @@ pub enum HeadAction {
     Look,
 }
 
-fn on_add_player_controller(
-    mut commands: Commands,
-    q_player: Query<
-        (Entity, &PlayerId, Has<Controlled>),
-        (Added<Predicted>, With<PlayerController>),
-    >,
-) {
-    for (entity, PlayerId(peer), is_controlled) in &q_player {
-        debug!("Adding PhysicsCharacterBundle to entity {entity:?}");
+fn on_add_player_controller(trigger: Trigger<OnAdd, PlayerController>, mut commands: Commands) {
+    let entity = trigger.target();
 
-        commands.entity(entity).insert((
-            PhysicsCharacterBundle::default(),
-            PhysicsCharacterInput::default(),
-        ));
+    commands.spawn((
+        Name::new("Head"),
+        InputMap::default()
+            .with_dual_axis(HeadAction::Look, GamepadStick::RIGHT)
+            .with_dual_axis(HeadAction::Look, MouseMove::default()),
+        HeadController {
+            offset: Vec3::new(0.0, CHARACTER_CAPSULE_HEIGHT / 2.0, 0.0),
+            ..default()
+        },
+        HeadControllerInput::default(),
+        HeadControllerTarget(entity),
+        Camera3d::default(),
+        Transform::default(),
+        Rotation::default(),
+    ));
 
-        if is_controlled {
-            debug!("Adding InputMap and Camera to controlled and predicted entity {entity:?}");
-
-            commands.spawn((
-                Name::new("Head"),
-                InputMap::default()
-                    .with_dual_axis(HeadAction::Look, GamepadStick::RIGHT)
-                    .with_dual_axis(HeadAction::Look, MouseMove::default()),
-                Camera3d::default(), // NOTE: Careful when self.render = false
-                HeadController {
-                    offset: Vec3::new(0.0, CHARACTER_CAPSULE_HEIGHT / 2.0, 0.0),
-                    ..default()
-                },
-                HeadControllerInput::default(),
-                Transform::default(),
-                Rotation::default(),
-                PlayerId(*peer),
-                HeadControllerMarker,
-                HeadControllerTarget(entity),
-                Replicate::to_server(),
-            ));
-
-            commands.entity(entity).insert((InputMap::default()
-                .with(CharacterAction::Jump, KeyCode::Space)
-                .with(CharacterAction::Jump, GamepadButton::South)
-                .with_dual_axis(CharacterAction::Move, GamepadStick::LEFT)
-                .with_dual_axis(CharacterAction::Move, VirtualDPad::wasd()),));
-        } else {
-            debug!("Remote character predicted for us: {entity:?}");
-        }
-    }
-}
-
-fn add_head_controller_to_new_players(
-    mut commands: Commands,
-    q_head: Query<(Entity, &PlayerId), (With<HeadControllerMarker>, Without<HeadControllerTarget>)>,
-    q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
-) {
-    for (entity, PlayerId(peer)) in &q_head {
-        let player = match q_player.iter().find(|(_, id)| id.0 == *peer) {
-            Some((e, _)) => e,
-            None => {
-                error!("No player entity found for HeadControllerMarker with PlayerId {peer:?}");
-                continue;
-            }
-        };
-
-        trace!("Linking head controller {entity:?} to player entity {player:?}");
-        commands.entity(entity).insert(HeadControllerTarget(player));
-    }
+    commands
+        .entity(entity)
+        .insert((InputMap::new([(CharacterAction::Jump, KeyCode::Space)])
+            .with(CharacterAction::Jump, GamepadButton::South)
+            .with_dual_axis(CharacterAction::Move, GamepadStick::LEFT)
+            .with_dual_axis(CharacterAction::Move, VirtualDPad::wasd()),));
 }
 
 fn update_character_input(
@@ -157,22 +95,19 @@ fn update_head_input(mut q_head: Query<(&mut HeadControllerInput, &ActionState<H
 
 fn sync_character_rotation(
     mut q_player: Query<&mut Rotation, With<PlayerController>>,
-    q_head: Query<(&Rotation, &HeadControllerTarget), Without<PlayerController>>,
+    q_head: Query<(&Transform, &HeadControllerTarget), With<HeadController>>,
 ) {
-    for (rotation, &HeadControllerTarget(target)) in q_head.iter() {
-        let mut target_rotation = match q_player.get_mut(target) {
+    for (transform, &HeadControllerTarget(target)) in q_head.iter() {
+        let mut rotation = match q_player.get_mut(target) {
             Ok(r) => r,
             Err(_) => {
-                // NOTE: This can happen when the client side does a rollback. Apparently lighyear
-                // removes the component that is being rolled back, not sure why, but just ignore
-                // it for now.
-                // warn!("HeadControllerTarget entity {target:?} does not have a Rotation");
+                warn!("HeadControllerTarget entity {target:?} does not have a Rotation");
                 continue;
             }
         };
 
-        let (yaw, _, _) = rotation.0.to_euler(EulerRot::YXZ);
-        target_rotation.0 = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
+        let (yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
+        rotation.0 = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
     }
 }
 
@@ -185,16 +120,12 @@ impl Plugin for PlayerRenderPlugin {
 }
 
 fn handle_render_player(
-    q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerController>)>,
+    q_player: Query<Entity, Added<PlayerController>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (entity, is_controlled) in q_player.iter() {
-        if is_controlled {
-            // NOTE: we don't render the local player character since the camera is inside it
-            continue;
-        }
+    for entity in q_player.iter() {
         debug!("Rendering player entity {entity:?}");
 
         commands.entity(entity).insert((

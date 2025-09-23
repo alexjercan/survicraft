@@ -180,7 +180,7 @@ impl Plugin for LauncherPlugin {
         if !dedicated {
             app.add_systems(OnEnter(LauncherStates::Playing), setup_controller);
         }
-        app.add_plugins(PlayerControllerPlugin {
+        app.add_plugins(NetworkPlayerControllerPlugin {
             render: self.render,
         });
 

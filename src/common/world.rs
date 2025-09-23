@@ -41,7 +41,7 @@ fn setup_initial_terrain(
 }
 
 fn discover_terrain_at_player_position(
-    q_player: Query<&Position, With<PlayerController>>,
+    q_player: Query<&Position, With<NetworkPlayerController>>,
     mut ev_discover: EventWriter<TileDiscoverEvent>,
 ) {
     for player_pos in q_player.iter() {

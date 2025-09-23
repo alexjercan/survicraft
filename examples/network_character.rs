@@ -64,7 +64,7 @@ fn main() {
             .disable::<SleepingPlugin>(),
     );
 
-    app.add_plugins(PlayerControllerPlugin { render: true });
+    app.add_plugins(NetworkPlayerControllerPlugin { render: true });
 
     app.add_systems(Startup, setup_render);
     if is_host {
@@ -402,7 +402,7 @@ fn on_new_connection(
     commands.spawn((
         PlayerId(*peer),
         Name::new("Player"),
-        ActionState::<CharacterAction>::default(),
+        ActionState::<NetworkCharacterAction>::default(),
         Position(Vec3::new(0.0, 3.0, 0.0)),
         Rotation::default(),
         Replicate::to_clients(NetworkTarget::All),
@@ -411,7 +411,7 @@ fn on_new_connection(
             owner: entity,
             lifetime: Lifetime::default(),
         },
-        PlayerController,
+        NetworkPlayerController,
         PhysicsCharacterBundle::default(),
         PhysicsCharacterInput::default(),
     ));

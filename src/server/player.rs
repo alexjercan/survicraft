@@ -17,7 +17,7 @@ impl Plugin for PlayerPlugin {
 fn handle_spawn_player(
     mut commands: Commands,
     mut q_receiver: Query<(Entity, &RemoteId, &mut MessageReceiver<ClientSpawnRequest>)>,
-    q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
+    q_player: Query<(Entity, &PlayerId), With<NetworkPlayerController>>,
 ) {
     for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
         for _ in receiver.receive() {
@@ -34,7 +34,7 @@ fn handle_spawn_player(
             commands.spawn((
                 PlayerId(*peer),
                 Name::new("Player"),
-                ActionState::<CharacterAction>::default(),
+                ActionState::<NetworkCharacterAction>::default(),
                 Position(Vec3::new(0.0, 3.0, 0.0)),
                 Rotation::default(),
                 Replicate::to_clients(NetworkTarget::All),
@@ -43,7 +43,7 @@ fn handle_spawn_player(
                     owner: entity,
                     lifetime: Lifetime::default(),
                 },
-                PlayerController,
+                NetworkPlayerController,
                 PhysicsCharacterBundle::default(),
                 PhysicsCharacterInput::default(),
             ));
