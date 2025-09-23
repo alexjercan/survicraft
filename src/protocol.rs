@@ -187,11 +187,11 @@ pub fn get_client_id() -> u64 {
 }
 
 fn position_should_rollback(this: &Position, that: &Position) -> bool {
-    (this.0 - that.0).length() >= 20.0
+    (this.0 - that.0).length() >= 0.01
 }
 
 fn rotation_should_rollback(this: &Rotation, that: &Rotation) -> bool {
-    this.angle_between(that.0) >= 2.0_f32.to_radians()
+    this.angle_between(that.0) >= 0.01
 }
 
 fn on_server_welcome(
