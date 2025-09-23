@@ -163,7 +163,10 @@ fn sync_character_rotation(
         let mut target_rotation = match q_player.get_mut(target) {
             Ok(r) => r,
             Err(_) => {
-                warn!("HeadControllerTarget entity {target:?} does not have a Rotation");
+                // NOTE: This can happen when the client side does a rollback. Apparently lighyear
+                // removes the component that is being rolled back, not sure why, but just ignore
+                // it for now.
+                // warn!("HeadControllerTarget entity {target:?} does not have a Rotation");
                 continue;
             }
         };
