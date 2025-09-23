@@ -44,7 +44,7 @@ fn on_chat_message(
                 message: ev.message.clone(),
             });
         } else {
-            warn!(
+            error!(
                 "Received chat message from unknown player ID {:?}",
                 ev.sender
             );

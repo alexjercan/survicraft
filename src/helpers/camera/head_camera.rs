@@ -67,7 +67,7 @@ fn sync_transform(
         let target_transform = match q_target.get(target) {
             Ok(t) => t,
             Err(_) => {
-                warn!("HeadControllerTarget entity {target:?} does not have a GlobalTransform");
+                error!("HeadControllerTarget entity {target:?} does not have a GlobalTransform");
                 continue;
             }
         };

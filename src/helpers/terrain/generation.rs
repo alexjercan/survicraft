@@ -80,7 +80,7 @@ fn handle_chunk(
                 commands.entity(entity).insert(Tile(kind));
             }
             None => {
-                warn!("No tile found for height: {}", height);
+                error!("No tile found for height: {}", height);
             }
         }
     }

@@ -130,7 +130,7 @@ fn add_head_controller_to_new_players(
         let player = match q_player.iter().find(|(_, id)| id.0 == *peer) {
             Some((e, _)) => e,
             None => {
-                warn!("No player entity found for HeadControllerMarker with PlayerId {peer:?}");
+                error!("No player entity found for HeadControllerMarker with PlayerId {peer:?}");
                 continue;
             }
         };
