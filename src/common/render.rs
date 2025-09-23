@@ -5,6 +5,10 @@ use lightyear::{
     prelude::*,
 };
 
+pub mod prelude {
+    pub use super::CommonRendererPlugin;
+}
+
 pub struct CommonRendererPlugin;
 
 impl Plugin for CommonRendererPlugin {

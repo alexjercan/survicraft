@@ -12,6 +12,10 @@ use bevy::{
 
 use crate::prelude::FIXED_TIMESTEP_HZ;
 
+pub mod prelude {
+    pub use super::{new_gui_app, new_headless_app, DedicatedServerPlugin};
+}
+
 #[cfg(feature = "debug")]
 use self::debug::{InpsectorDebugPlugin, LoggingDebugPlugin};
 

@@ -3,6 +3,10 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
+pub mod prelude {
+    pub use super::MainMenuAssets;
+}
+
 #[derive(AssetCollection, Resource, Clone)]
 pub struct MainMenuAssets {
     #[asset(path = "textures/GameIcons/exitRight.png")]

@@ -10,6 +10,13 @@ use std::{fmt::Debug, time::SystemTime};
 
 use crate::{client::prelude::*, common::prelude::*};
 
+pub mod prelude {
+    pub use super::{
+        ClientMultiplayerClickEvent, ClientPlayClickEvent, DisplayQualitySetting,
+        MainMenuIcons, MainMenuPlugin, VolumeSetting, MainMenuRoot,
+    };
+}
+
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy)]
 pub enum DisplayQualitySetting {
     Low,

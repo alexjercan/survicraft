@@ -1,7 +1,7 @@
 //! TODO: Add documentation
 
 use super::{components::*, resources::*};
-use crate::helpers::prelude::*;
+use crate::common::prelude::*;
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,

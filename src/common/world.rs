@@ -1,6 +1,10 @@
-use crate::{common::prelude::*, helpers::prelude::*};
+use crate::common::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+
+pub mod prelude {
+    pub use super::{TerrainGenerationPlugin, InitializeTerrain};
+}
 
 const DISCOVER_RADIUS: u32 = 5;
 const INITIAL_TERRAIN_RADIUS: u32 = 5;

@@ -1,6 +1,13 @@
-use crate::{common::prelude::*, helpers::prelude::*};
+use crate::common::prelude::*;
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin, Worley};
+
+pub mod prelude {
+    pub use super::{
+        FeatureAsset, FeatureAssets, FeatureID, FeaturesGenerationPlugin, PlanetFeatures,
+        TileFeature, FeatureVariant,
+    };
+}
 
 pub type FeatureID = String;
 

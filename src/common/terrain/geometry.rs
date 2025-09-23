@@ -1,7 +1,7 @@
 //! TODO: Add module documentation
 
 use super::components::*;
-use crate::helpers::prelude::*;
+use crate::common::prelude::*;
 use bevy::{
     asset::RenderAssetUsages,
     platform::collections::HashMap,
