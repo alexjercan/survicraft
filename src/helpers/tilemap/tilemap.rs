@@ -322,7 +322,6 @@ mod tests {
         let storage = TileMapStorage {
             tile_size: Vec2::splat(1.0),
             chunk_radius: 2,
-            discover_radius: 1,
             chunks: HashMap::default(),
         };
 
@@ -345,7 +344,6 @@ mod tests {
         let storage = TileMapStorage {
             tile_size: Vec2::splat(1.0),
             chunk_radius: 2,
-            discover_radius: 1,
             chunks: HashMap::default(),
         };
 
@@ -389,7 +387,6 @@ mod tests {
         let storage = TileMapStorage {
             tile_size: Vec2::splat(1.0),
             chunk_radius: 2,
-            discover_radius: 1,
             chunks: HashMap::default(),
         };
 
@@ -440,7 +437,6 @@ mod tests {
         let storage = TileMapStorage {
             tile_size: Vec2::splat(1.0),
             chunk_radius: 2,
-            discover_radius: 1,
             chunks: HashMap::default(),
         };
 
@@ -476,11 +472,11 @@ mod tests {
         assert_eq!(tiles, expected);
     }
 
+    #[test]
     fn test_chunk_border() {
         let storage = TileMapStorage {
             tile_size: Vec2::splat(1.0),
             chunk_radius: 2,
-            discover_radius: 1,
             chunks: HashMap::default(),
         };
 

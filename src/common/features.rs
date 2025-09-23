@@ -1,4 +1,4 @@
-use crate::helpers::prelude::*;
+use crate::{common::prelude::*, helpers::prelude::*};
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin, Worley};
 

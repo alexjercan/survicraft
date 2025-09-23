@@ -1,7 +1,7 @@
 //! TODO: Documentation
 
 use super::components::*;
-use crate::helpers::tilemap::prelude::*;
+use crate::helpers::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 

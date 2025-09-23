@@ -8,7 +8,7 @@ use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
 use std::{fmt::Debug, time::SystemTime};
 
-use crate::{client::prelude::*, helpers::prelude::*};
+use crate::{client::prelude::*, common::prelude::*};
 
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy)]
 pub enum DisplayQualitySetting {

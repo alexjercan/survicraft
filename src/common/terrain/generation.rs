@@ -1,9 +1,8 @@
 //! TODO: Documentation
 
 use std::time::SystemTime;
-
 use super::{components::*, planet::*, resources::*};
-use crate::helpers::{chunk_map::prelude::*, tilemap::prelude::*};
+use crate::helpers::prelude::*;
 use bevy::prelude::*;
 
 #[derive(Resource, Debug, Clone, PartialEq, Deref, DerefMut, Reflect)]
@@ -106,4 +105,14 @@ fn handle_chunk_progress(
 
     progress.total_chunks = total_chunks;
     progress.generated_chunks = generated_chunks;
+}
+
+impl ChunkMapInput for TileCoord {
+    type Query = (&'static TileCoord,);
+
+    fn from_query_item(
+        item: bevy::ecs::query::QueryItem<<Self::Query as bevy::ecs::query::QueryData>::ReadOnly>,
+    ) -> Self {
+        item.0.clone()
+    }
 }

@@ -1,6 +1,6 @@
 //! The network plugin handles the server listener
 
-use crate::{helpers::prelude::*, protocol::prelude::*};
+use crate::{common::prelude::*, protocol::prelude::*};
 use bevy::prelude::*;
 use lightyear::{
     netcode::NetcodeServer,

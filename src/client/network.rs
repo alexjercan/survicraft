@@ -1,7 +1,7 @@
 //! The network plugin handles client connections to the server and sync's
 //! the client metadata (e.g. username) upon connection.
 
-use crate::{helpers::prelude::*, protocol::prelude::*};
+use crate::{common::prelude::*, protocol::prelude::*};
 use bevy::prelude::*;
 use lightyear::{
     netcode::{Key, NetcodeClient},

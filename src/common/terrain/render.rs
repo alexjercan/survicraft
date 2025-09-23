@@ -1,7 +1,7 @@
 //! TODO: Add documentation
 
-use super::components::*;
-use crate::helpers::{terrain::prelude::*, tilemap::prelude::*};
+use super::{components::*, resources::*};
+use crate::helpers::prelude::*;
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,

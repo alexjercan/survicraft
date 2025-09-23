@@ -5,6 +5,7 @@ mod main_menu;
 mod render;
 mod setup;
 mod terrain;
+mod world;
 
 pub mod prelude {
     pub use super::assets::*;
@@ -13,5 +14,6 @@ pub mod prelude {
     pub use super::main_menu::*;
     pub use super::render::*;
     pub use super::setup::*;
-    pub use super::terrain::*;
+    pub use super::terrain::prelude::*;
+    pub use super::world::*;
 }
