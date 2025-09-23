@@ -8,7 +8,7 @@ mod terrain;
 
 pub mod prelude {
     pub use super::assets::*;
-    pub use super::controller::*;
+    pub use super::controller::prelude::*;
     pub use super::features::*;
     pub use super::main_menu::*;
     pub use super::render::*;

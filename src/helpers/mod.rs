@@ -1,4 +1,7 @@
 //! TODO: Add module-level documentation
+//!
+//! Simple helper utitlies that I can re-use in other games. Some important aspects:
+//! - this should not depend on multiplayer stuff (e.g lightyear)
 
 mod camera;
 mod character;
