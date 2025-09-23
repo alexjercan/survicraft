@@ -137,10 +137,7 @@ impl Plugin for LauncherPlugin {
         );
 
         // Terrain generation setup and progress tracking.
-        app.add_plugins(TerrainGenerationPlugin {
-            render: self.render,
-        });
-        app.add_plugins(FeaturesGenerationPlugin {
+        app.add_plugins(WorldGenerationPlugin {
             render: self.render,
         });
         if !dedicated {

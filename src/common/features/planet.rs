@@ -1,127 +1,7 @@
 use crate::common::prelude::*;
+use super::{components::*, resources::*};
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin, Worley};
-
-pub mod prelude {
-    pub use super::{
-        FeatureAsset, FeatureAssets, FeatureID, FeaturesGenerationPlugin, PlanetFeatures,
-        TileFeature, FeatureVariant,
-    };
-}
-
-pub type FeatureID = String;
-
-#[derive(Asset, TypePath, Debug, Clone)]
-pub struct FeatureAsset {
-    pub id: FeatureID,
-    pub name: String,
-    pub variants: Vec<FeatureVariant>,
-}
-
-impl FeatureAsset {
-    pub fn get_variant(&self, id: &TileID) -> Option<&FeatureVariant> {
-        self.variants.iter().find(|variant| &variant.id == id)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct FeatureVariant {
-    pub id: TileID,
-    pub name: String,
-    pub threshold: f64,
-    pub scene: Handle<Scene>,
-}
-
-#[derive(Component, Debug, Clone, Deref, DerefMut, Reflect)]
-pub struct TileFeature(pub Option<FeatureID>);
-
-impl ChunkMapInput for (TileCoord, Tile) {
-    type Query = (&'static TileCoord, &'static Tile);
-
-    fn from_query_item(
-        item: bevy::ecs::query::QueryItem<<Self::Query as bevy::ecs::query::QueryData>::ReadOnly>,
-    ) -> Self {
-        (item.0.clone(), item.1.clone())
-    }
-}
-
-#[derive(Resource, Clone, Default, Debug)]
-pub struct FeatureAssets {
-    pub features: Vec<FeatureAsset>,
-}
-
-impl FeatureAssets {
-    pub fn new(features: Vec<FeatureAsset>) -> Self {
-        Self { features }
-    }
-
-    pub fn get_feature(&self, id: &FeatureID) -> Option<&FeatureAsset> {
-        self.features.iter().find(|feature| &feature.id == id)
-    }
-}
-
-pub struct FeaturesGenerationPlugin {
-    pub render: bool,
-}
-
-impl Plugin for FeaturesGenerationPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(ChunkMapPlugin::<(TileCoord, Tile), TileFeature, _>::new(
-            PlanetFeatures::default(),
-        ));
-
-        app.add_systems(
-            Update,
-            update_features_map.run_if(resource_changed::<FeatureAssets>),
-        );
-
-        if self.render {
-            app.add_systems(Update, handle_feature_tile);
-        }
-    }
-}
-
-fn update_features_map(features: Res<FeatureAssets>, mut planet_features: ResMut<PlanetFeatures>) {
-    planet_features.map = features.clone();
-}
-
-#[derive(Component)]
-struct ChunkFeatureReady;
-
-fn handle_feature_tile(
-    mut commands: Commands,
-    assets: Res<FeatureAssets>,
-    q_hex: Query<(Entity, &TileWorldHeight, &Tile, &TileFeature), Without<ChunkFeatureReady>>,
-) {
-    if q_hex.is_empty() {
-        return;
-    }
-    trace!("Handling feature tiles for {} hexes", q_hex.iter().len());
-
-    for (entity, height, tile, feature) in q_hex.iter() {
-        commands.entity(entity).insert(ChunkFeatureReady);
-
-        let Some(id) = (**feature).clone() else {
-            continue;
-        };
-
-        let Some(feature_asset) = assets.get_feature(&id) else {
-            continue;
-        };
-
-        let Some(variant) = feature_asset.get_variant(&**tile) else {
-            continue;
-        };
-
-        commands.entity(entity).with_children(|parent| {
-            parent.spawn((
-                Transform::from_xyz(0.0, (**height) as f32, 0.0).with_scale(Vec3::splat(3.0)),
-                SceneRoot(variant.scene.clone()),
-                Name::new("Feature Tile"),
-            ));
-        });
-    }
-}
 
 /// Planet seed. Change this to generate a different planet.
 const CURRENT_SEED: u32 = 0;
@@ -151,7 +31,7 @@ const FEATURE_ABUNDANCE_LACUNARITY: f64 = 2.21875;
 pub struct PlanetFeatures {
     seed: u32,
     zoom_scale: f64,
-    map: FeatureAssets,
+    pub map: FeatureAssets,
     patch_frequency: f64,
     patch_lacunarity: f64,
     abundance_frequency: f64,

@@ -1,7 +1,7 @@
 mod physics;
-mod creative;
+mod wasd;
 
 pub mod prelude {
     pub use super::physics::*;
-    pub use super::creative::*;
+    pub use super::wasd::*;
 }
