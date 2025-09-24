@@ -70,11 +70,7 @@ fn setup(
             0.0,
             -std::f32::consts::FRAC_PI_4,
         ))),
-        Mesh3d(meshes.add(Cuboid::new(
-            FLOOR_WIDTH,
-            FLOOR_HEIGHT,
-            FLOOR_WIDTH,
-        ))),
+        Mesh3d(meshes.add(Cuboid::new(FLOOR_WIDTH, FLOOR_HEIGHT, FLOOR_WIDTH))),
         MeshMaterial3d(materials.add(Color::srgb(0.8, 0.8, 0.8))),
     ));
 

@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use lightyear::connection::host::HostClient;
@@ -8,31 +9,38 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-pub mod prelude {
-    pub use super::*;
-}
+pub(super) const PROTOCOL_ID: u64 = 0;
 
-pub const PROTOCOL_ID: u64 = 0;
+pub(super) const FIXED_TIMESTEP_HZ: f64 = 64.0;
 
-pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
+pub(super) const SERVER_REPLICATION_INTERVAL: Duration = Duration::from_millis(100);
 
-pub const SERVER_REPLICATION_INTERVAL: Duration = Duration::from_millis(100);
+pub(super) const SERVER_PORT: u16 = 5555;
+pub(super) const SERVER_ADDR: SocketAddr =
+    SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), SERVER_PORT);
 
-pub const SERVER_PORT: u16 = 5555;
-pub const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), SERVER_PORT);
-
-// --- Components ---
-
+/// Component used to identify which player "owns" an entity.
+/// This can be added on player characters, player-placed objects, etc.
 #[derive(Component, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Reflect)]
-pub struct PlayerId(pub PeerId);
+pub(super) struct PlayerId(pub PeerId);
 
+/// Component used to store metadata about a player, such as their username.
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-pub struct PlayerMetadata {
+pub(super) struct PlayerMetadata {
     pub username: String,
 }
 
-// --- Messages ---
+/// Marker component for the player character entity. Spawn this when you
+/// want to attach a player bundle and have it be controlled by a player.
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+pub(super) struct PlayerController;
 
+/// Marker component for the head entity, which is responsible for character rotation.
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+pub(super) struct HeadControllerMarker;
+
+/// The Server Welcome Message will contain any initial data the client needs
+/// to start, such as a random seed for procedural generation.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ServerWelcomeMessage {
     pub seed: u32,
@@ -51,6 +59,10 @@ pub struct ClientMetaMessage {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientSpawnRequest;
+
+/// Event that is used to signal that a player want's to be spawned.
+#[derive(Debug, Clone, Event)]
+pub struct ClientSpawnPlayerEvent;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ClientChatMessage {
@@ -81,9 +93,15 @@ impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
         // Components for player
         app.register_type::<PlayerId>()
-            .register_type::<PlayerMetadata>();
+            .register_type::<PlayerMetadata>()
+            .register_type::<PlayerController>()
+            .register_type::<HeadControllerMarker>();
 
         app.register_component::<Name>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
+        app.register_component::<RigidBody>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
@@ -95,7 +113,11 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
-        app.register_component::<RigidBody>()
+        app.register_component::<PlayerController>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
+        app.register_component::<HeadControllerMarker>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
@@ -155,8 +177,11 @@ impl Plugin for ProtocolPlugin {
 
         app.add_message::<ClientMetaMessage>()
             .add_direction(NetworkDirection::ClientToServer);
+
         app.add_message::<ClientSpawnRequest>()
             .add_direction(NetworkDirection::ClientToServer);
+        app.add_event::<ClientSpawnPlayerEvent>();
+
         app.add_message::<ClientChatMessage>()
             .add_direction(NetworkDirection::ClientToServer);
 
@@ -174,8 +199,12 @@ impl Plugin for ProtocolPlugin {
         app.add_systems(FixedUpdate, on_server_welcome);
         app.add_systems(FixedUpdate, on_client_welcome);
 
+        app.add_systems(Update, on_client_spawn_event);
+
         app.add_systems(FixedUpdate, on_server_chat_message);
-        app.add_systems(FixedUpdate, on_client_chat_message);
+        app.add_systems(FixedUpdate, receive_server_chat_message);
+        app.add_systems(FixedUpdate, receive_client_chat_message);
+        app.add_systems(Update, on_chat_message_submit);
     }
 }
 
@@ -224,10 +253,25 @@ fn on_client_welcome(
     }
 }
 
+fn on_client_spawn_event(
+    mut ev_spawn: EventReader<ClientSpawnPlayerEvent>,
+    sender: Single<(&RemoteId, &mut MessageSender<ClientSpawnRequest>)>,
+) {
+    let (RemoteId(peer), mut sender) = sender.into_inner();
+
+    for _ in ev_spawn.read() {
+        debug!("Sending spawn request for player {:?}", *peer);
+
+        sender.send::<MessageChannel>(ClientSpawnRequest);
+    }
+}
+
 fn on_server_chat_message(
     mut ev_chat: EventReader<ServerChatMessageEvent>,
     mut sender: ServerMultiMessageSender,
     server: Single<&Server>,
+    q_players: Query<(&PlayerMetadata, &PlayerId)>,
+    mut ev_history: EventWriter<AddChatHistoryItemEvent>,
 ) -> Result {
     for ev in ev_chat.read() {
         sender.send::<_, MessageChannel>(
@@ -238,12 +282,28 @@ fn on_server_chat_message(
             server.clone(),
             &NetworkTarget::All,
         )?;
+
+        if let Some((PlayerMetadata { username, .. }, _)) =
+            q_players.iter().find(|(_, id)| id.0 == ev.sender)
+        {
+            debug!("Received chat message from {}: {}", username, ev.message);
+
+            ev_history.write(AddChatHistoryItemEvent {
+                sender: username.clone(),
+                message: ev.message.clone(),
+            });
+        } else {
+            error!(
+                "Received chat message from unknown player ID {:?}",
+                ev.sender
+            );
+        }
     }
 
     Ok(())
 }
 
-fn on_client_chat_message(
+fn receive_server_chat_message(
     mut q_receiver: Query<&mut MessageReceiver<ServerChatMessage>>,
     mut ev_chat: EventWriter<ServerChatMessageEvent>,
 ) {
@@ -252,6 +312,38 @@ fn on_client_chat_message(
             ev_chat.write(ServerChatMessageEvent {
                 sender: message.sender.clone(),
                 message: message.message.clone(),
+            });
+        }
+    }
+}
+
+fn receive_client_chat_message(
+    mut q_receiver: Query<(&RemoteId, &mut MessageReceiver<ClientChatMessage>)>,
+    mut ev_chat: EventWriter<ServerChatMessageEvent>,
+) {
+    for (RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
+        for message in receiver.receive() {
+            debug!("Received chat message from {:?}: {}", peer, message.message);
+
+            ev_chat.write(ServerChatMessageEvent {
+                sender: *peer,
+                message: message.message.clone(),
+            });
+        }
+    }
+}
+
+fn on_chat_message_submit(
+    mut ev_submitted: EventReader<ChatMessageSubmittedEvent>,
+    mut sender: Single<&mut MessageSender<ClientChatMessage>>,
+) {
+    for ev in ev_submitted.read() {
+        let msg = ev.message.trim();
+        debug!("Player submitted chat message: {}", msg);
+
+        if !msg.is_empty() {
+            sender.send::<MessageChannel>(ClientChatMessage {
+                message: msg.to_string(),
             });
         }
     }

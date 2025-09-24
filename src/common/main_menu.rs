@@ -4,16 +4,15 @@
 //! This can trigger events to start a new game or connect to a multiplayer server.
 //! This plugin also manages user settings such as display quality, volume, and player name.
 
+use crate::common::prelude::*;
 use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
 use std::{fmt::Debug, time::SystemTime};
 
-use crate::{client::prelude::*, common::prelude::*};
-
 pub mod prelude {
     pub use super::{
-        ClientMultiplayerClickEvent, ClientPlayClickEvent, DisplayQualitySetting,
-        MainMenuIcons, MainMenuPlugin, VolumeSetting, MainMenuRoot,
+        ClientMultiplayerClickEvent, ClientPlayClickEvent, DisplayQualitySetting, MainMenuIcons,
+        MainMenuPlugin, MainMenuRoot, PlayerNameSetting, VolumeSetting,
     };
 }
 
@@ -26,6 +25,19 @@ pub enum DisplayQualitySetting {
 
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy, Deref, DerefMut)]
 pub struct VolumeSetting(pub u32);
+
+#[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Deref, DerefMut)]
+pub struct PlayerNameSetting(pub String);
+
+impl Default for PlayerNameSetting {
+    fn default() -> Self {
+        let time = SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        Self(format!("Player{}", time % 1000))
+    }
+}
 
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
@@ -114,6 +126,7 @@ impl Plugin for MainMenuPlugin {
 
         app.insert_resource(DisplayQualitySetting::Medium);
         app.insert_resource(VolumeSetting(7));
+        app.insert_resource(PlayerNameSetting::default());
 
         app.insert_resource(MainMenuIcons::default());
         app.add_systems(

@@ -1,4 +1,5 @@
-use crate::{common::prelude::*, protocol::prelude::*};
+use super::protocol::*;
+use crate::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -6,42 +7,23 @@ use lightyear::input::{config::InputConfig, leafwing::prelude::*};
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// Marker component for the player character entity. Spawn this when you
-/// want to attach a player bundle and have it be controlled by a player.
-#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-pub struct NetworkPlayerController;
-
-#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-struct HeadControllerMarker;
-
-pub struct NetworkPlayerControllerPlugin {
+pub struct PlayerControllerPlugin {
     pub render: bool,
 }
 
-impl Plugin for NetworkPlayerControllerPlugin {
+impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<NetworkPlayerController>();
-
-        // Register the player controller for networking
-        app.register_component::<NetworkPlayerController>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
-        app.register_component::<HeadControllerMarker>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
         app.add_plugins(PhysicsCharacterPlugin);
         app.add_plugins(HeadControllerPlugin);
 
         // Add input handling for network rebroadcasting
-        app.add_plugins(InputPlugin::<NetworkCharacterAction> {
-            config: InputConfig::<NetworkCharacterAction> {
+        app.add_plugins(InputPlugin::<CharacterAction> {
+            config: InputConfig::<CharacterAction> {
                 rebroadcast_inputs: true,
                 ..default()
             },
         });
-        app.add_plugins(InputManagerPlugin::<NetworkHeadAction>::default());
+        app.add_plugins(InputManagerPlugin::<HeadAction>::default());
 
         if self.render {
             app.add_plugins(PlayerRenderPlugin);
@@ -56,28 +38,65 @@ impl Plugin for NetworkPlayerControllerPlugin {
                 update_head_input,
             ),
         );
-        app.add_systems(FixedUpdate, sync_character_rotation);
+        app.add_systems(FixedUpdate, (handle_spawn_player, sync_character_rotation));
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash, Reflect, Actionlike)]
-pub enum NetworkCharacterAction {
+pub enum CharacterAction {
     #[actionlike(DualAxis)]
     Move,
     Jump,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash, Reflect, Actionlike)]
-pub enum NetworkHeadAction {
+pub enum HeadAction {
     #[actionlike(DualAxis)]
     Look,
+}
+
+fn handle_spawn_player(
+    mut commands: Commands,
+    mut q_receiver: Query<(Entity, &RemoteId, &mut MessageReceiver<ClientSpawnRequest>)>,
+    q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
+) {
+    for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
+        for _ in receiver.receive() {
+            if q_player.iter().any(|(_, id)| id.0 == *peer) {
+                warn!(
+                    "Player with ID {:?} already has a character, ignoring spawn request",
+                    peer
+                );
+                continue;
+            }
+
+            debug!("Spawning player character for peer {:?}", peer);
+
+            commands.spawn((
+                PlayerId(*peer),
+                Name::new("Player"),
+                ActionState::<CharacterAction>::default(),
+                Position(Vec3::new(0.0, 3.0, 0.0)),
+                Rotation::default(),
+                Replicate::to_clients(NetworkTarget::All),
+                PredictionTarget::to_clients(NetworkTarget::All),
+                ControlledBy {
+                    owner: entity,
+                    lifetime: Lifetime::default(),
+                },
+                PlayerController,
+                PhysicsCharacterBundle::default(),
+                PhysicsCharacterInput::default(),
+            ));
+        }
+    }
 }
 
 fn on_add_player_controller(
     mut commands: Commands,
     q_player: Query<
         (Entity, &PlayerId, Has<Controlled>),
-        (Added<Predicted>, With<NetworkPlayerController>),
+        (Added<Predicted>, With<PlayerController>),
     >,
 ) {
     for (entity, PlayerId(peer), is_controlled) in &q_player {
@@ -94,8 +113,8 @@ fn on_add_player_controller(
             commands.spawn((
                 Name::new("Head"),
                 InputMap::default()
-                    .with_dual_axis(NetworkHeadAction::Look, GamepadStick::RIGHT)
-                    .with_dual_axis(NetworkHeadAction::Look, MouseMove::default()),
+                    .with_dual_axis(HeadAction::Look, GamepadStick::RIGHT)
+                    .with_dual_axis(HeadAction::Look, MouseMove::default()),
                 Camera3d::default(), // NOTE: Careful when self.render = false
                 HeadController {
                     offset: Vec3::new(0.0, CHARACTER_CAPSULE_HEIGHT / 2.0, 0.0),
@@ -111,10 +130,10 @@ fn on_add_player_controller(
             ));
 
             commands.entity(entity).insert((InputMap::default()
-                .with(NetworkCharacterAction::Jump, KeyCode::Space)
-                .with(NetworkCharacterAction::Jump, GamepadButton::South)
-                .with_dual_axis(NetworkCharacterAction::Move, GamepadStick::LEFT)
-                .with_dual_axis(NetworkCharacterAction::Move, VirtualDPad::wasd()),));
+                .with(CharacterAction::Jump, KeyCode::Space)
+                .with(CharacterAction::Jump, GamepadButton::South)
+                .with_dual_axis(CharacterAction::Move, GamepadStick::LEFT)
+                .with_dual_axis(CharacterAction::Move, VirtualDPad::wasd()),));
         } else {
             debug!("Remote character predicted for us: {entity:?}");
         }
@@ -124,7 +143,7 @@ fn on_add_player_controller(
 fn add_head_controller_to_new_players(
     mut commands: Commands,
     q_head: Query<(Entity, &PlayerId), (With<HeadControllerMarker>, Without<HeadControllerTarget>)>,
-    q_player: Query<(Entity, &PlayerId), With<NetworkPlayerController>>,
+    q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
 ) {
     for (entity, PlayerId(peer)) in &q_head {
         let player = match q_player.iter().find(|(_, id)| id.0 == *peer) {
@@ -141,28 +160,23 @@ fn add_head_controller_to_new_players(
 }
 
 fn update_character_input(
-    mut q_player: Query<(
-        &mut PhysicsCharacterInput,
-        &ActionState<NetworkCharacterAction>,
-    )>,
+    mut q_player: Query<(&mut PhysicsCharacterInput, &ActionState<CharacterAction>)>,
 ) {
     for (mut input, action_state) in q_player.iter_mut() {
-        input.move_axis = action_state.axis_pair(&NetworkCharacterAction::Move);
-        input.jump = action_state.just_pressed(&NetworkCharacterAction::Jump);
+        input.move_axis = action_state.axis_pair(&CharacterAction::Move);
+        input.jump = action_state.just_pressed(&CharacterAction::Jump);
     }
 }
 
-fn update_head_input(
-    mut q_head: Query<(&mut HeadControllerInput, &ActionState<NetworkHeadAction>)>,
-) {
+fn update_head_input(mut q_head: Query<(&mut HeadControllerInput, &ActionState<HeadAction>)>) {
     for (mut input, action_state) in q_head.iter_mut() {
-        input.look_axis = action_state.axis_pair(&NetworkHeadAction::Look);
+        input.look_axis = action_state.axis_pair(&HeadAction::Look);
     }
 }
 
 fn sync_character_rotation(
-    mut q_player: Query<&mut Rotation, With<NetworkPlayerController>>,
-    q_head: Query<(&Rotation, &HeadControllerTarget), Without<NetworkPlayerController>>,
+    mut q_player: Query<&mut Rotation, With<PlayerController>>,
+    q_head: Query<(&Rotation, &HeadControllerTarget), Without<PlayerController>>,
 ) {
     for (rotation, &HeadControllerTarget(target)) in q_head.iter() {
         let mut target_rotation = match q_player.get_mut(target) {
@@ -190,7 +204,7 @@ impl Plugin for PlayerRenderPlugin {
 }
 
 fn handle_render_player(
-    q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<NetworkPlayerController>)>,
+    q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerController>)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,

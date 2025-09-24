@@ -1,25 +1,17 @@
+use super::{protocol::*, states::*};
 use crate::common::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-pub mod prelude {
-    pub use super::{WorldGenerationPlugin, InitializeTerrain};
-}
-
 const DISCOVER_RADIUS: u32 = 5;
 const INITIAL_TERRAIN_RADIUS: u32 = 5;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Reflect)]
-pub struct InitializeTerrain;
-
-pub struct WorldGenerationPlugin {
+pub(super) struct WorldGenerationPlugin {
     pub render: bool,
 }
 
 impl Plugin for WorldGenerationPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<InitializeTerrain>();
-
         app.add_plugins(TerrainPlugin::default());
         app.add_plugins(FeaturesPlugin::default());
 
@@ -28,20 +20,17 @@ impl Plugin for WorldGenerationPlugin {
             app.add_plugins(FeaturesRenderPlugin::default());
         }
 
-        app.add_observer(setup_initial_terrain);
+        app.add_systems(OnEnter(LauncherStates::Generating), setup_initial_terrain);
         app.add_systems(Update, discover_terrain_at_player_position);
     }
 }
 
-fn setup_initial_terrain(
-    _: Trigger<OnAdd, InitializeTerrain>,
-    mut ev_discover: EventWriter<TileDiscoverEvent>,
-) {
+fn setup_initial_terrain(mut ev_discover: EventWriter<TileDiscoverEvent>) {
     ev_discover.write(TileDiscoverEvent::new(Vec2::ZERO, INITIAL_TERRAIN_RADIUS));
 }
 
 fn discover_terrain_at_player_position(
-    q_player: Query<&Position, With<NetworkPlayerController>>,
+    q_player: Query<&Position, With<PlayerController>>,
     mut ev_discover: EventWriter<TileDiscoverEvent>,
 ) {
     for player_pos in q_player.iter() {

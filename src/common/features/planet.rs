@@ -1,5 +1,5 @@
-use crate::common::prelude::*;
 use super::{components::*, resources::*};
+use crate::common::prelude::*;
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin, Worley};
 

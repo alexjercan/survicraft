@@ -1,3 +1,4 @@
+use super::states::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use lightyear::{
@@ -5,11 +6,7 @@ use lightyear::{
     prelude::*,
 };
 
-pub mod prelude {
-    pub use super::CommonRendererPlugin;
-}
-
-pub struct CommonRendererPlugin;
+pub(super) struct CommonRendererPlugin;
 
 impl Plugin for CommonRendererPlugin {
     fn build(&self, app: &mut App) {
@@ -21,7 +18,18 @@ impl Plugin for CommonRendererPlugin {
         // Observers that add VisualInterpolationStatus components to entities
         // which receive a Position and are predicted
         app.add_observer(add_visual_interpolation_components);
+
+        app.add_systems(OnEnter(LauncherStates::Playing), setup_render);
     }
+}
+
+fn setup_render(mut commands: Commands) {
+    commands.spawn((
+        DirectionalLight::default(),
+        Transform::from_xyz(60.0, 60.0, 00.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Name::new("Directional Light"),
+        StateScoped(LauncherStates::Playing),
+    ));
 }
 
 fn add_visual_interpolation_components(

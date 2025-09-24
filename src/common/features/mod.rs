@@ -9,9 +9,9 @@ use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::components::TileFeature;
+    pub use super::render::FeaturesRenderPlugin;
     pub use super::resources::*;
     pub use super::FeaturesPlugin;
-    pub use super::render::FeaturesRenderPlugin;
 }
 
 pub struct FeaturesPlugin {}

@@ -72,9 +72,15 @@ fn main() {
         app.add_systems(Startup, setup_server);
     } else {
         app.add_systems(Startup, setup_client);
-        app.add_systems(Update, (add_floor_to_client, add_wall_to_client, add_cube_to_client));
+        app.add_systems(
+            Update,
+            (add_floor_to_client, add_wall_to_client, add_cube_to_client),
+        );
     }
-    app.add_systems(Update, (add_floor_cosmetic, add_wall_cosmetic, add_cube_cosmetic));
+    app.add_systems(
+        Update,
+        (add_floor_cosmetic, add_wall_cosmetic, add_cube_cosmetic),
+    );
 
     if is_host {
         app.add_observer(on_new_client);
@@ -112,10 +118,9 @@ fn add_floor_to_client(
     q_floor: Query<Entity, (With<FloorMarker>, Without<Collider>)>,
 ) {
     for entity in q_floor.iter() {
-        commands.entity(entity).insert((
-            Collider::cuboid(20.0, 1.0, 20.0),
-            RigidBody::Static,
-        ));
+        commands
+            .entity(entity)
+            .insert((Collider::cuboid(20.0, 1.0, 20.0), RigidBody::Static));
     }
 }
 
@@ -161,16 +166,22 @@ fn add_cube_to_client(
     q_cube: Query<Entity, (With<CubeMarker>, Without<Collider>)>,
 ) {
     for entity in q_cube.iter() {
-        commands.entity(entity).insert((
-            Collider::cuboid(0.5, 0.5, 0.5),
-            RigidBody::Dynamic,
-        ));
+        commands
+            .entity(entity)
+            .insert((Collider::cuboid(0.5, 0.5, 0.5), RigidBody::Dynamic));
     }
 }
 
 fn add_cube_cosmetic(
     mut commands: Commands,
-    q_cube: Query<Entity, (Or<(Added<Predicted>, Added<Replicate>)>, With<CubeMarker>, Without<Mesh3d>)>,
+    q_cube: Query<
+        Entity,
+        (
+            Or<(Added<Predicted>, Added<Replicate>)>,
+            With<CubeMarker>,
+            Without<Mesh3d>,
+        ),
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
