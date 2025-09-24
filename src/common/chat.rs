@@ -7,7 +7,10 @@ use bevy_simple_text_input::*;
 use leafwing_input_manager::prelude::*;
 
 pub mod prelude {
-    pub use super::{AddChatHistoryItemEvent, ChatMenuRoot, ChatMessageSubmittedEvent, ChatPlugin};
+    pub use super::{
+        AddChatHistoryItemEvent, ChatHistoryRoot, ChatInputRoot, ChatMessageSubmittedEvent,
+        ChatPlugin,
+    };
 }
 
 const BORDER_COLOR: Color = Color::srgba(0.25, 0.25, 0.25, 0.25);
@@ -27,9 +30,13 @@ pub struct AddChatHistoryItemEvent {
     pub message: String,
 }
 
-/// Marker component that will spawn the chat UI related entities.
+/// Marker component that will spawn the chat history UI as a child.
 #[derive(Component)]
-pub struct ChatMenuRoot;
+pub struct ChatHistoryRoot;
+
+/// Marker component that will spawn the chat input UI as a child.
+#[derive(Component)]
+pub struct ChatInputRoot;
 
 // TODO: How can I add this into some kind of common settings config?
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, Reflect, Actionlike)]
@@ -74,7 +81,8 @@ impl Plugin for ChatPlugin {
         app.add_systems(
             Update,
             (
-                chat_ui_setup,
+                chat_history_ui_setup,
+                chat_input_ui_setup,
                 on_chat_message,
                 (
                     on_chat_submit.run_if(resource_equals(ChatEnabled(true))),
@@ -86,11 +94,39 @@ impl Plugin for ChatPlugin {
     }
 }
 
-fn chat_ui_setup(
+fn chat_history_ui_setup(
     mut commands: Commands,
-    root: Single<Entity, (With<ChatMenuRoot>, Added<ChatMenuRoot>)>,
+    root: Single<Entity, (With<ChatHistoryRoot>, Added<ChatHistoryRoot>)>,
 ) {
-    debug!("Setting up chat UI...");
+    debug!("Setting up chat history UI...");
+
+    commands.entity(root.entity()).with_children(|parent| {
+        parent.spawn((
+            Name::new("ChatHistoryUI"),
+            HistoryListUI {
+                messages: VecDeque::new(),
+                max_messages: 5,
+            },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                position_type: PositionType::Relative,
+                overflow: Overflow {
+                    x: OverflowAxis::Hidden,
+                    y: OverflowAxis::Scroll,
+                },
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+        ));
+    });
+}
+
+fn chat_input_ui_setup(
+    mut commands: Commands,
+    root: Single<Entity, (With<ChatInputRoot>, Added<ChatInputRoot>)>,
+) {
+    debug!("Setting up chat input UI...");
 
     commands.entity(root.entity()).with_children(|parent| {
         parent.spawn((
@@ -100,86 +136,51 @@ fn chat_ui_setup(
 
         parent
             .spawn((
-                Name::new("ChatUI"),
+                Name::new("ChatInputUI"),
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
-                    position_type: PositionType::Relative, // default, but explicit
+                    position_type: PositionType::Relative,
                     ..default()
                 },
             ))
             .with_children(|parent| {
-                // --- Chat history in bottom-left ---
                 parent.spawn((
-                    Name::new("ChatHistoryUI"),
-                    HistoryListUI {
-                        messages: VecDeque::new(),
-                        max_messages: 5,
-                    },
+                    Name::new("ChatMessageInput"),
+                    ChatMessageInput,
                     Node {
-                        width: Val::Px(300.0),
-                        height: Val::Px(200.0),
+                        width: Val::Px(500.0),
+                        height: Val::Px(64.0),
+                        border: UiRect::all(Val::Px(5.0)),
+                        padding: UiRect::all(Val::Px(5.0)),
                         position_type: PositionType::Absolute,
-                        left: Val::Px(20.0),
-                        bottom: Val::Px(20.0),
-                        flex_direction: FlexDirection::Column,
-                        overflow: Overflow {
-                            x: OverflowAxis::Hidden,
-                            y: OverflowAxis::Scroll,
+                        left: Val::Percent(50.0),
+                        top: Val::Percent(50.0),
+                        margin: UiRect {
+                            left: Val::Px(-250.0), // half width
+                            top: Val::Px(-34.0),   // half height
+                            ..default()
                         },
                         ..default()
                     },
+                    Interaction::None,
+                    BorderColor(BORDER_COLOR),
+                    BackgroundColor(BACKGROUND_COLOR),
+                    FocusPolicy::Block,
+                    TextInput,
+                    TextInputTextFont(TextFont {
+                        font_size: 34.,
+                        ..default()
+                    }),
+                    TextInputTextColor(TextColor(TEXT_COLOR)),
+                    TextInputValue("".to_string()),
+                    TextInputSettings {
+                        retain_on_submit: false,
+                        ..default()
+                    },
+                    TextInputInactive(true),
+                    Visibility::Hidden,
                 ));
-
-                // --- Input box centered ---
-                parent
-                    .spawn((
-                        Name::new("ChatInputUI"),
-                        Node {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
-                            position_type: PositionType::Relative,
-                            ..default()
-                        },
-                    ))
-                    .with_children(|parent| {
-                        parent.spawn((
-                            Name::new("ChatMessageInput"),
-                            ChatMessageInput,
-                            Node {
-                                width: Val::Px(500.0),
-                                height: Val::Px(64.0),
-                                border: UiRect::all(Val::Px(5.0)),
-                                padding: UiRect::all(Val::Px(5.0)),
-                                position_type: PositionType::Absolute,
-                                left: Val::Percent(50.0),
-                                top: Val::Percent(50.0),
-                                margin: UiRect {
-                                    left: Val::Px(-250.0), // half width
-                                    top: Val::Px(-34.0),   // half height
-                                    ..default()
-                                },
-                                ..default()
-                            },
-                            Interaction::None,
-                            BorderColor(BORDER_COLOR),
-                            BackgroundColor(BACKGROUND_COLOR),
-                            FocusPolicy::Block,
-                            TextInput,
-                            TextInputTextFont(TextFont {
-                                font_size: 34.,
-                                ..default()
-                            }),
-                            TextInputTextColor(TextColor(TEXT_COLOR)),
-                            TextInputValue("".to_string()),
-                            TextInputSettings {
-                                retain_on_submit: false,
-                                ..default()
-                            },
-                            TextInputInactive(true),
-                            Visibility::Hidden,
-                        ));
-                    });
             });
     });
 }

@@ -100,17 +100,49 @@ fn setup_loading_ui() {
 }
 
 fn setup_chat(mut commands: Commands) {
-    commands.spawn((
-        Name::new("ChatUI"),
-        ChatMenuRoot,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-        StateScoped(LauncherStates::Playing),
-    ));
+    commands
+        .spawn((
+            Name::new("ChatUIRoot"),
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+            StateScoped(LauncherStates::Playing),
+        ))
+        .with_children(|parent| {
+            // --- Chat history in bottom-left ---
+            parent.spawn((
+                Name::new("ChatHistoryUIRoot"),
+                ChatHistoryRoot,
+                Node {
+                    width: Val::Px(300.0),
+                    height: Val::Px(200.0),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(20.0),
+                    bottom: Val::Px(20.0),
+                    flex_direction: FlexDirection::Column,
+                    overflow: Overflow {
+                        x: OverflowAxis::Hidden,
+                        y: OverflowAxis::Scroll,
+                    },
+                    ..default()
+                },
+            ));
+
+            // --- Chat input in middle-screen ---
+            parent.spawn((
+                Name::new("ChatInputUIRoot"),
+                ChatInputRoot,
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    position_type: PositionType::Relative,
+                    ..default()
+                },
+            ));
+        });
 }
