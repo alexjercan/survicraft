@@ -1,7 +1,5 @@
 //! TODO: Add documentation
 
-use super::{components::*, resources::*};
-use crate::common::prelude::*;
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
@@ -13,6 +11,8 @@ use bevy::{
 
 #[cfg(feature = "debug")]
 use self::debug::*;
+use super::{components::*, resources::*};
+use crate::common::prelude::*;
 
 pub struct TerrainRenderPlugin {
     tile_size: Vec2,
@@ -142,8 +142,9 @@ impl MaterialExtension for ChunkMaterial {
 
 #[cfg(feature = "debug")]
 mod debug {
-    use super::*;
     use bevy::pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin};
+
+    use super::*;
 
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
     struct ShowGrid(pub bool);

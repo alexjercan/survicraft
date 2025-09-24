@@ -1,7 +1,8 @@
-use super::states::*;
-use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
+
+use super::states::*;
+use crate::prelude::*;
 
 pub(super) struct AssetsPlugin;
 

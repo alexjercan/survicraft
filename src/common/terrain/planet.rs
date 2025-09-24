@@ -1,8 +1,8 @@
-use crate::common::prelude::*;
 use bevy::prelude::*;
 use noise::{Fbm, MultiFractal, NoiseFn, Perlin};
 
 use super::components::*;
+use crate::common::prelude::*;
 
 /// Planet seed. Change this to generate a different planet.
 const CURRENT_SEED: u32 = 0;

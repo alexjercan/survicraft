@@ -11,10 +11,11 @@ mod planet;
 mod render;
 mod resources;
 
+use bevy::prelude::*;
+
 use self::collider::TerrainColliderPlugin;
 use self::generation::TerrainGenerationPlugin;
 use self::geometry::TerrainGeometryPlugin;
-use bevy::prelude::*;
 
 pub mod prelude {
     pub use super::components::{Tile, TileWorldHeight};

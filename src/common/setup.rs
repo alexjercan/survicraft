@@ -115,7 +115,6 @@ impl Plugin for DedicatedServerPlugin {
 
 #[cfg(feature = "debug")]
 mod debug {
-    use crate::prelude::*;
     use avian3d::prelude::*;
     use bevy::{prelude::*, render::view::RenderLayers};
     use bevy_inspector_egui::{
@@ -128,6 +127,8 @@ mod debug {
         frame_interpolation::FrameInterpolate,
         prelude::{input::InputBuffer, server::ClientOf, *},
     };
+
+    use crate::prelude::*;
 
     pub struct InpsectorDebugPlugin;
 

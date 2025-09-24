@@ -1,8 +1,9 @@
 //! TODO: Add documentation
 
+use bevy::prelude::*;
+
 use super::{components::*, resources::*};
 use crate::common::prelude::*;
-use bevy::prelude::*;
 
 pub struct FeaturesRenderPlugin {}
 

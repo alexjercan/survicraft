@@ -1,13 +1,15 @@
-use crate::prelude::*;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use lightyear::connection::host::HostClient;
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+
+use crate::prelude::*;
 
 pub(super) const PROTOCOL_ID: u64 = 0;
 

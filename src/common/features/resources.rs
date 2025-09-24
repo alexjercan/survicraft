@@ -1,5 +1,6 @@
-use crate::common::prelude::*;
 use bevy::prelude::*;
+
+use crate::common::prelude::*;
 
 pub type FeatureID = String;
 

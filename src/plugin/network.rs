@@ -1,5 +1,9 @@
-use super::{protocol::*, resources::*, states::*};
-use crate::prelude::*;
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    str::FromStr,
+    time::Duration,
+};
+
 use bevy::prelude::*;
 use lightyear::{
     netcode::{Key, NetcodeClient, NetcodeServer},
@@ -9,11 +13,9 @@ use lightyear::{
         *,
     },
 };
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    str::FromStr,
-    time::Duration,
-};
+
+use super::{protocol::*, resources::*, states::*};
+use crate::prelude::*;
 
 pub(super) struct NetworkPlugin {
     pub dedicated: bool,

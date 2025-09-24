@@ -1,10 +1,11 @@
-use super::states::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use lightyear::{
     frame_interpolation::{FrameInterpolate, FrameInterpolationPlugin},
     prelude::*,
 };
+
+use super::states::*;
 
 pub(super) struct CommonRendererPlugin;
 

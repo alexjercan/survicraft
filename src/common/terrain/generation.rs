@@ -1,9 +1,11 @@
 //! TODO: Documentation
 
+use std::time::SystemTime;
+
+use bevy::prelude::*;
+
 use super::{components::*, planet::*, resources::*};
 use crate::common::prelude::*;
-use bevy::prelude::*;
-use std::time::SystemTime;
 
 #[derive(Resource, Debug, Clone, PartialEq, Deref, DerefMut, Reflect)]
 pub struct TerrainGenerationSeed(pub u32);

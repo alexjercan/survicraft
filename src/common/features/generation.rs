@@ -1,6 +1,7 @@
+use bevy::prelude::*;
+
 use super::{components::*, planet::*, resources::*};
 use crate::common::prelude::*;
-use bevy::prelude::*;
 
 pub struct FeaturesGenerationPlugin {}
 

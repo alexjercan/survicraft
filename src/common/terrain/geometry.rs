@@ -1,7 +1,5 @@
 //! TODO: Add module documentation
 
-use super::components::*;
-use crate::common::prelude::*;
 use bevy::{
     asset::RenderAssetUsages,
     platform::collections::HashMap,
@@ -9,6 +7,9 @@ use bevy::{
     render::mesh::{Indices, PrimitiveTopology},
 };
 use itertools::Itertools;
+
+use super::components::*;
+use crate::common::prelude::*;
 
 pub struct TerrainGeometryPlugin {
     tile_size: Vec2,

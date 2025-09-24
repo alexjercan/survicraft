@@ -12,9 +12,10 @@ mod states;
 mod ui;
 mod world;
 
-use crate::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+
+use crate::prelude::*;
 
 pub struct LauncherPlugin {
     pub render: bool,

@@ -1,9 +1,10 @@
 //! TODO: Documentation
 
-use super::components::*;
-use crate::common::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
+
+use super::components::*;
+use crate::common::prelude::*;
 
 pub struct TerrainColliderPlugin;
 

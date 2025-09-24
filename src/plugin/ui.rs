@@ -1,7 +1,8 @@
-use super::{resources::*, states::*};
-use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_simple_text_input::TextInputPlugin;
+
+use super::{resources::*, states::*};
+use crate::prelude::*;
 
 pub(super) struct UIPlugin;
 

@@ -21,8 +21,8 @@
 //! of the square.
 
 use bevy::{platform::collections::HashMap, prelude::*};
-// use pathfinding::prelude::astar;
 
+// use pathfinding::prelude::astar;
 #[cfg(feature = "debug")]
 use self::debug::DebugPlugin;
 
@@ -250,8 +250,9 @@ fn generate_chunks(
 
 #[cfg(feature = "debug")]
 mod debug {
-    use super::{ChunkCoord, TileMapStorage};
     use bevy::prelude::*;
+
+    use super::{ChunkCoord, TileMapStorage};
 
     #[derive(Debug, Resource, Default, Clone, Deref, DerefMut)]
     struct ShowGrid(pub bool);

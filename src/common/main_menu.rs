@@ -4,10 +4,12 @@
 //! This can trigger events to start a new game or connect to a multiplayer server.
 //! This plugin also manages user settings such as display quality, volume, and player name.
 
-use crate::common::prelude::*;
+use std::{fmt::Debug, time::SystemTime};
+
 use bevy::{prelude::*, ui::FocusPolicy};
 use bevy_simple_text_input::*;
-use std::{fmt::Debug, time::SystemTime};
+
+use crate::common::prelude::*;
 
 pub mod prelude {
     pub use super::{

@@ -1,7 +1,8 @@
-use super::{network::*, states::*};
-use crate::prelude::*;
 use bevy::prelude::*;
 use iyes_progress::prelude::*;
+
+use super::{network::*, states::*};
+use crate::prelude::*;
 
 pub(super) struct LauncherProgressPlugin;
 

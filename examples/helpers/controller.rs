@@ -1,8 +1,8 @@
-use survicraft::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use serde::{Deserialize, Serialize};
+use survicraft::prelude::*;
 
 /// Marker component for the player character entity. Spawn this when you
 /// want to attach a player bundle and have it be controlled by a player.

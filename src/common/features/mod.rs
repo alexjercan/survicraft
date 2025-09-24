@@ -4,8 +4,9 @@ mod planet;
 mod render;
 mod resources;
 
-use self::generation::FeaturesGenerationPlugin;
 use bevy::prelude::*;
+
+use self::generation::FeaturesGenerationPlugin;
 
 pub mod prelude {
     pub use super::components::TileFeature;

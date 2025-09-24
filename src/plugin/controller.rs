@@ -1,11 +1,12 @@
-use super::protocol::*;
-use crate::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
 use lightyear::input::{config::InputConfig, leafwing::prelude::*};
 use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
+
+use super::protocol::*;
+use crate::prelude::*;
 
 pub struct PlayerControllerPlugin {
     pub render: bool,
