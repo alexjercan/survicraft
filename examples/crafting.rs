@@ -1,7 +1,10 @@
+mod helpers;
+
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
 use survicraft::prelude::*;
+use helpers::controller::{PlayerController, PlayerControllerPlugin};
 
 #[derive(Parser)]
 #[command(name = "survicraft-crafting")]

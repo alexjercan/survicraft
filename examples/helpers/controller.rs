@@ -1,4 +1,4 @@
-use crate::common::prelude::*;
+use survicraft::prelude::*;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
