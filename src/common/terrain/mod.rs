@@ -39,7 +39,7 @@ impl Default for TerrainPlugin {
         Self {
             tile_size: TILE_SIZE,
             chunk_radius: CHUNK_RADIUS,
-            max_height: 10.0,
+            max_height: 20.0,
         }
     }
 }

@@ -290,7 +290,6 @@ fn apply_gravity(
         if grounded {
             // Snap down a little to stick to ground
             velocity.y = velocity.y.min(0.0);
-            velocity.y -= 2.0 * dt; // small extra downward force
         } else {
             **velocity += **gravity * dt;
         }
