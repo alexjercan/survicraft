@@ -6,15 +6,18 @@ use avian3d::{
 };
 use bevy::{ecs::query::QueryData, prelude::*};
 
-use super::{constants::*, components::*};
+use super::{components::*, constants::*};
 
 pub mod prelude {
     pub use super::{
-        ControllerGravity, JumpImpulse, KinematicCharacterBundle,
-        KinematicCharacterGrounded, KinematicCharacterPlugin,
-        MaxSlopeAngle, MovementAcceleration, MovementBundle, MovementDampingFactor,
+        ControllerGravity, JumpImpulse, KinematicCharacterBundle, KinematicCharacterGrounded,
+        KinematicCharacterPlugin, MaxSlopeAngle, MovementAcceleration, MovementBundle,
+        MovementDampingFactor,
     };
 }
+
+#[cfg(feature = "debug")]
+use self::debug::PlayerDebugPlugin;
 
 pub struct KinematicCharacterPlugin;
 
@@ -26,6 +29,9 @@ impl Plugin for KinematicCharacterPlugin {
             .register_type::<JumpImpulse>()
             .register_type::<ControllerGravity>()
             .register_type::<MaxSlopeAngle>();
+
+        #[cfg(feature = "debug")]
+        app.add_plugins(PlayerDebugPlugin);
 
         app.add_systems(
             Update,
@@ -98,7 +104,7 @@ impl Default for KinematicCharacterBundle {
             body: RigidBody::Kinematic,
             collider,
             ground_caster: ShapeCaster::new(caster_shape, Vec3::ZERO, Quat::default(), Dir3::NEG_Y)
-                .with_max_distance(0.2),
+                .with_max_distance(0.1),
             gravity: ControllerGravity(Vector::new(0.0, -9.81, 0.0)),
             movement: MovementBundle::default(),
         }
@@ -132,7 +138,7 @@ impl Default for MovementBundle {
             acceleration: MovementAcceleration(30.0),
             damping: MovementDampingFactor(0.92),
             jump_impulse: JumpImpulse(7.0),
-            max_slope_angle: MaxSlopeAngle(Scalar::to_radians(45.0)),
+            max_slope_angle: MaxSlopeAngle(Scalar::to_radians(80.0)),
         }
     }
 }
@@ -199,8 +205,10 @@ fn handle_character_actions(
 #[derive(QueryData)]
 #[query_data(mutable, derive(Debug))]
 struct CharacterQuery {
+    entity: Entity,
     acceleration: &'static MovementAcceleration,
     jump_impulse: &'static JumpImpulse,
+    position: &'static Position,
     rotation: &'static Rotation,
     linear_velocity: &'static mut LinearVelocity,
     grounded: Has<KinematicCharacterGrounded>,
@@ -231,14 +239,22 @@ fn apply_character_action(
 
 fn apply_gravity(
     time: Res<Time>,
-    mut controllers: Query<(&ControllerGravity, &mut LinearVelocity)>,
+    mut controllers: Query<(
+        &ControllerGravity,
+        &mut LinearVelocity,
+        Has<KinematicCharacterGrounded>,
+    )>,
 ) {
-    // Precision is adjusted so that the example works with
-    // both the `f32` and `f64` features. Otherwise you don't need this.
-    let delta_time = time.delta_secs_f64().adjust_precision();
+    let dt = time.delta_secs_f64().adjust_precision();
 
-    for (gravity, mut linear_velocity) in &mut controllers {
-        linear_velocity.0 += gravity.0 * delta_time;
+    for (gravity, mut velocity, grounded) in &mut controllers {
+        if grounded {
+            // Snap down a little to stick to ground
+            velocity.y = velocity.y.min(0.0);
+            velocity.y -= 2.0 * dt; // small extra downward force
+        } else {
+            velocity.0 += gravity.0 * dt;
+        }
     }
 }
 
@@ -318,7 +334,7 @@ fn kinematic_controller_collisions(
             // Solve each penetrating contact in the manifold.
             for contact in manifold.points.iter() {
                 if contact.penetration > 0.0 {
-                    position.0 += normal * contact.penetration;
+                    position.0 += normal * (contact.penetration + 0.01); // bias outward
                 }
                 deepest_penetration = deepest_penetration.max(contact.penetration);
             }
@@ -336,29 +352,12 @@ fn kinematic_controller_collisions(
                 // If the slope is climbable, snap the velocity so that the character
                 // up and down the surface smoothly.
                 if climbable {
-                    // Points in the normal's direction in the XZ plane.
-                    let normal_direction_xz =
-                        normal.reject_from_normalized(Vector::Y).normalize_or_zero();
+                    // Project velocity onto the slope plane instead of adjusting Y separately
+                    let slope_normal = normal.normalize();
+                    let projected = linear_velocity.reject_from_normalized(slope_normal);
 
-                    // The movement speed along the direction above.
-                    let linear_velocity_xz = linear_velocity.dot(normal_direction_xz);
-
-                    // Snap the Y speed based on the speed at which the character is moving
-                    // up or down the slope, and how steep the slope is.
-                    //
-                    // A 2D visualization of the slope, the contact normal, and the velocity components:
-                    //
-                    //             ╱
-                    //     normal ╱
-                    // *         ╱
-                    // │   *    ╱   velocity_x
-                    // │       * - - - - - -
-                    // │           *       | velocity_y
-                    // │               *   |
-                    // *───────────────────*
-
-                    let max_y_speed = -linear_velocity_xz * slope_angle.tan();
-                    linear_velocity.y = linear_velocity.y.max(max_y_speed);
+                    // Blend between original and projected velocity to avoid sticky/laggy edges
+                    linear_velocity.0 = linear_velocity.0.lerp(projected, 0.5);
                 } else {
                     // The character is intersecting an unclimbable object, like a wall.
                     // We want the character to slide along the surface, similarly to
@@ -402,6 +401,30 @@ fn kinematic_controller_collisions(
                     linear_velocity.0 -= impulse;
                 }
             }
+        }
+    }
+}
+
+#[cfg(feature = "debug")]
+mod debug {
+    use super::*;
+
+    pub struct PlayerDebugPlugin;
+    impl Plugin for PlayerDebugPlugin {
+        fn build(&self, app: &mut App) {
+            app.add_systems(Update, log_player_character_state);
+        }
+    }
+
+    fn log_player_character_state(q_player: Query<CharacterQuery, With<CharacterInput>>) {
+        for character in &q_player {
+            trace!(
+                "PlayerController {:?}: LinearVelocity={:?}, Position={:?}, Rotation={:?}",
+                character.entity,
+                character.linear_velocity,
+                character.position,
+                character.rotation,
+            );
         }
     }
 }

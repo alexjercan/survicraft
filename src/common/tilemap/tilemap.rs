@@ -104,7 +104,7 @@ impl TileMapStorage {
         border
     }
 
-    fn tile_to_center(&self, tile: &IVec2) -> IVec2 {
+    pub fn tile_to_center(&self, tile: &IVec2) -> IVec2 {
         let step = self.chunk_radius as i32 * 2 + 1;
         ((tile + tile.signum() * self.chunk_radius as i32) / step) * step
     }
@@ -283,10 +283,10 @@ mod debug {
         }
 
         for chunk in q_chunk.iter() {
-            for tile in storage.chunk_tiles(**chunk) {
-                let pos = storage.tile_to_world_pos(tile).extend(0.0).xzy();
-                draw_square(&mut gizmos, pos, storage.tile_size.x, Color::WHITE);
-            }
+            // for tile in storage.chunk_tiles(**chunk) {
+            //     let pos = storage.tile_to_world_pos(tile).extend(0.0).xzy();
+            //     draw_square(&mut gizmos, pos, storage.tile_size.x, Color::WHITE);
+            // }
 
             let pos = storage.tile_to_world_pos(**chunk).extend(0.0).xzy();
             draw_square(

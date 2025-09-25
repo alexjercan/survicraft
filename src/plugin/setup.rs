@@ -124,7 +124,7 @@ mod debug {
         prelude::{input::InputBuffer, server::ClientOf, *},
     };
 
-    use crate::prelude::*;
+    use crate::plugin::controller::{CharacterAction, PlayerController};
 
     pub struct InpsectorDebugPlugin;
 
@@ -218,100 +218,100 @@ mod debug {
 
     impl Plugin for LoggingDebugPlugin {
         fn build(&self, app: &mut App) {
-            // app.add_systems(Last, last_log);
-            // app.add_systems(FixedLast, fixed_last_log);
+            app.add_systems(Last, last_log);
+            app.add_systems(FixedLast, fixed_last_log);
         }
     }
 
-    // pub(crate) fn fixed_last_log(
-    //     timeline: Single<(&LocalTimeline, Has<Rollback>), Or<(With<Client>, Without<ClientOf>)>>,
-    //     players: Query<
-    //         (
-    //             Entity,
-    //             &Position,
-    //             Option<&VisualCorrection<Position>>,
-    //             &Rotation,
-    //             Option<&VisualCorrection<Rotation>>,
-    //             Option<&ActionState<CharacterAction>>,
-    //             Option<&InputBuffer<ActionState<CharacterAction>>>,
-    //         ),
-    //         (With<PlayerController>, Without<Confirmed>),
-    //     >,
-    // ) {
-    //     let (timeline, rollback) = timeline.into_inner();
-    //     let tick = timeline.tick();
+    pub(crate) fn fixed_last_log(
+        timeline: Single<(&LocalTimeline, Has<Rollback>), Or<(With<Client>, Without<ClientOf>)>>,
+        players: Query<
+            (
+                Entity,
+                &Position,
+                Option<&VisualCorrection<Position>>,
+                &Rotation,
+                Option<&VisualCorrection<Rotation>>,
+                Option<&ActionState<CharacterAction>>,
+                Option<&InputBuffer<ActionState<CharacterAction>>>,
+            ),
+            (With<PlayerController>, Without<Confirmed>),
+        >,
+    ) {
+        let (timeline, rollback) = timeline.into_inner();
+        let tick = timeline.tick();
 
-    //     for (
-    //         entity,
-    //         position,
-    //         position_correction,
-    //         rotation,
-    //         rotation_correction,
-    //         action_state,
-    //         input_buffer,
-    //     ) in players.iter()
-    //     {
-    //         let pressed = action_state.map(|a| a.axis_pair(&CharacterAction::Move));
-    //         let last_buffer_tick =
-    //             input_buffer.and_then(|b| b.get_last_with_tick().map(|(t, _)| t));
-    //         trace!(
-    //             ?rollback,
-    //             ?tick,
-    //             ?entity,
-    //             ?position,
-    //             ?position_correction,
-    //             ?rotation,
-    //             ?rotation_correction,
-    //             ?pressed,
-    //             ?last_buffer_tick,
-    //             "Player - FixedLast"
-    //         );
-    //     }
-    // }
+        for (
+            entity,
+            position,
+            position_correction,
+            rotation,
+            rotation_correction,
+            action_state,
+            input_buffer,
+        ) in players.iter()
+        {
+            let pressed = action_state.map(|a| a.axis_pair(&CharacterAction::Move));
+            let last_buffer_tick =
+                input_buffer.and_then(|b| b.get_last_with_tick().map(|(t, _)| t));
+            trace!(
+                ?rollback,
+                ?tick,
+                ?entity,
+                ?position,
+                ?position_correction,
+                ?rotation,
+                ?rotation_correction,
+                ?pressed,
+                ?last_buffer_tick,
+                "Player - FixedLast"
+            );
+        }
+    }
 
-    // pub(crate) fn last_log(
-    //     timeline: Single<(&LocalTimeline, Has<Rollback>), Or<(With<Client>, Without<ClientOf>)>>,
-    //     players: Query<
-    //         (
-    //             Entity,
-    //             &Position,
-    //             &Rotation,
-    //             &Transform,
-    //             Option<&FrameInterpolate<Position>>,
-    //             Option<&VisualCorrection<Position>>,
-    //             Option<&FrameInterpolate<Rotation>>,
-    //             Option<&VisualCorrection<Rotation>>,
-    //         ),
-    //         (With<PlayerController>, Without<Confirmed>),
-    //     >,
-    // ) {
-    //     let (timeline, rollback) = timeline.into_inner();
-    //     let tick = timeline.tick();
+    pub(crate) fn last_log(
+        timeline: Single<(&LocalTimeline, Has<Rollback>), Or<(With<Client>, Without<ClientOf>)>>,
+        players: Query<
+            (
+                Entity,
+                &Position,
+                &Rotation,
+                &Transform,
+                Option<&FrameInterpolate<Position>>,
+                Option<&VisualCorrection<Position>>,
+                Option<&FrameInterpolate<Rotation>>,
+                Option<&VisualCorrection<Rotation>>,
+            ),
+            (With<PlayerController>, Without<Confirmed>),
+        >,
+    ) {
+        let (timeline, rollback) = timeline.into_inner();
+        let tick = timeline.tick();
 
-    //     for (
-    //         entity,
-    //         position,
-    //         rotation,
-    //         transform,
-    //         position_interpolate,
-    //         position_correction,
-    //         rotation_interpolate,
-    //         rotation_correction,
-    //     ) in players.iter()
-    //     {
-    //         trace!(
-    //             ?rollback,
-    //             ?tick,
-    //             ?entity,
-    //             ?position,
-    //             ?rotation,
-    //             ?transform,
-    //             ?position_interpolate,
-    //             ?position_correction,
-    //             ?rotation_interpolate,
-    //             ?rotation_correction,
-    //             "Player - Last"
-    //         );
-    //     }
-    // }
+        for (
+            entity,
+            position,
+            rotation,
+            transform,
+            position_interpolate,
+            position_correction,
+            rotation_interpolate,
+            rotation_correction,
+        ) in players.iter()
+        {
+            trace!(
+                ?rollback,
+                ?tick,
+                ?entity,
+                ?position,
+                ?rotation,
+                ?transform,
+                ?position_interpolate,
+                ?position_correction,
+                ?rotation_interpolate,
+                ?rotation_correction,
+                "Player - Last"
+            );
+        }
+    }
 }

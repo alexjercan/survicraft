@@ -142,7 +142,10 @@ impl MaterialExtension for ChunkMaterial {
 
 #[cfg(feature = "debug")]
 mod debug {
-    use bevy::pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin};
+    use bevy::{
+        pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
+        render::mesh::VertexAttributeValues,
+    };
 
     use super::*;
 
@@ -159,7 +162,7 @@ mod debug {
                     default_color: Color::WHITE,
                 });
             app.insert_resource(ShowGrid(true));
-            app.add_systems(Update, (toggle, draw_grid, undraw_grid));
+            app.add_systems(Update, (toggle, draw_grid, undraw_grid, draw_normals));
         }
     }
 
@@ -172,14 +175,35 @@ mod debug {
     fn draw_grid(
         mut commands: Commands,
         show_grid: Res<ShowGrid>,
-        q_meshes: Query<Entity, (With<ChunkMesh>, Without<Wireframe>)>,
+        q_meshes: Query<(Entity, &ChildOf, Has<Wireframe>), With<ChunkMesh>>,
+        q_chunks: Query<&ChunkCoord>,
+        q_camera: Query<&Transform, With<Camera3d>>,
+        storage: Res<TileMapStorage>,
     ) {
         if !**show_grid {
             return;
         }
 
-        for entity in q_meshes.iter() {
-            commands.entity(entity).insert(Wireframe);
+        let Ok(transform) = q_camera.single() else {
+            return;
+        };
+
+        let tile = storage.world_pos_to_tile(transform.translation.xz());
+        let center = storage.tile_to_center(&tile);
+
+        for (entity, ChildOf(parent), has_wireframe) in q_meshes.iter() {
+            let Ok(ChunkCoord(coord)) = q_chunks.get(*parent) else {
+                continue;
+            };
+
+            if center == *coord {
+                if has_wireframe {
+                    continue;
+                }
+                commands.entity(entity).insert(Wireframe);
+            } else {
+                commands.entity(entity).remove::<Wireframe>();
+            }
         }
     }
 
@@ -194,6 +218,60 @@ mod debug {
 
         for entity in q_meshes.iter() {
             commands.entity(entity).remove::<Wireframe>();
+        }
+    }
+
+    fn draw_normals(
+        mut gizmos: Gizmos,
+        show_grid: Res<ShowGrid>,
+        q_meshes: Query<(&ChunkMesh, &ChildOf, &GlobalTransform)>,
+        q_chunks: Query<&ChunkCoord>,
+        q_camera: Query<&Transform, With<Camera3d>>,
+        storage: Res<TileMapStorage>,
+    ) {
+        if !**show_grid {
+            return;
+        }
+
+        let Ok(transform) = q_camera.single() else {
+            return;
+        };
+
+        let tile = storage.world_pos_to_tile(transform.translation.xz());
+        let center = storage.tile_to_center(&tile);
+
+        let line_length = 0.25;
+        for (mesh, ChildOf(parent), transform) in &q_meshes {
+            let Ok(ChunkCoord(coord)) = q_chunks.get(*parent) else {
+                continue;
+            };
+
+            if center != *coord {
+                continue;
+            }
+
+            let Some(VertexAttributeValues::Float32x3(positions)) =
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+            else {
+                continue;
+            };
+
+            let Some(VertexAttributeValues::Float32x3(normals)) =
+                mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
+            else {
+                continue;
+            };
+
+            for (pos, normal) in positions.iter().zip(normals.iter()) {
+                let pos = transform.transform_point(Vec3::from_array(*pos));
+                let normal = transform.rotation() * Vec3::from_array(*normal);
+
+                gizmos.line(
+                    pos,
+                    pos + normal.normalize() * line_length,
+                    Color::srgb(0.0, 1.0, 0.0),
+                );
+            }
         }
     }
 }

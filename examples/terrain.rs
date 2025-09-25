@@ -15,7 +15,7 @@ struct Cli {
     dynamic: bool,
 }
 
-const DISCOVER_RADIUS: u32 = 5;
+const DISCOVER_RADIUS: u32 = 1;
 
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct ExampleIsDynamic(bool);
@@ -112,7 +112,7 @@ fn spawn_player_on_space(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    if !keyboard.just_pressed(KeyCode::Space) {
+    if !keyboard.just_pressed(KeyCode::KeyP) {
         return;
     }
 
