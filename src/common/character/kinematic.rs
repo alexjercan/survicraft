@@ -27,6 +27,7 @@ impl Plugin for KinematicCharacterPlugin {
             .register_type::<MovementAcceleration>()
             .register_type::<MovementDampingFactor>()
             .register_type::<JumpImpulse>()
+            .register_type::<JumpTimer>()
             .register_type::<ControllerGravity>()
             .register_type::<MaxSlopeAngle>();
 
@@ -55,25 +56,29 @@ impl Plugin for KinematicCharacterPlugin {
 }
 
 /// The acceleration used for character movement.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct MovementAcceleration(Scalar);
 
 /// The damping factor used for slowing down movement.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct MovementDampingFactor(Scalar);
 
 /// The strength of a jump.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct JumpImpulse(Scalar);
 
+/// A timer used to allow late jumps when Grounded flickers.
+#[derive(Component, Debug, Default, Deref, DerefMut, Reflect)]
+pub struct JumpTimer(Timer);
+
 /// The gravitational acceleration used for a character controller.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct ControllerGravity(Vector);
 
 /// The maximum angle a slope can have for a character controller
 /// to be able to climb and jump. If the slope is steeper than this angle,
 /// the character will slide down.
-#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
 pub struct MaxSlopeAngle(Scalar);
 
 /// A marker component indicating that an entity is on the ground.
@@ -129,6 +134,7 @@ pub struct MovementBundle {
     acceleration: MovementAcceleration,
     damping: MovementDampingFactor,
     jump_impulse: JumpImpulse,
+    jump_timer: JumpTimer,
     max_slope_angle: MaxSlopeAngle,
 }
 
@@ -138,6 +144,7 @@ impl Default for MovementBundle {
             acceleration: MovementAcceleration(30.0),
             damping: MovementDampingFactor(0.92),
             jump_impulse: JumpImpulse(7.0),
+            jump_timer: JumpTimer(Timer::from_seconds(0.1, TimerMode::Once)),
             max_slope_angle: MaxSlopeAngle(Scalar::to_radians(80.0)),
         }
     }
@@ -156,6 +163,11 @@ impl MovementBundle {
 
     pub fn with_jump_impulse(mut self, impulse: Scalar) -> Self {
         self.jump_impulse = JumpImpulse(impulse);
+        self
+    }
+
+    pub fn with_jump_timer(mut self, secs: f32) -> Self {
+        self.jump_timer = JumpTimer(Timer::from_seconds(secs, TimerMode::Once));
         self
     }
 
@@ -208,6 +220,7 @@ struct CharacterQuery {
     entity: Entity,
     acceleration: &'static MovementAcceleration,
     jump_impulse: &'static JumpImpulse,
+    jump_timer: &'static mut JumpTimer,
     position: &'static Position,
     rotation: &'static Rotation,
     linear_velocity: &'static mut LinearVelocity,
@@ -222,17 +235,22 @@ fn apply_character_action(
     // Precision is adjusted so that the example works with
     // both the `f32` and `f64` features. Otherwise you don't need this.
     let delta_time = time.delta_secs_f64().adjust_precision();
+    character.jump_timer.tick(time.delta());
 
     // === MOVEMENT ===
     let move_input = input.move_axis.clamp_length_max(1.0);
     let local_move = Vec3::new(move_input.x, 0.0, -move_input.y);
     let world_move = character.rotation.0 * local_move;
 
-    character.linear_velocity.x += world_move.x * character.acceleration.0 * delta_time;
-    character.linear_velocity.z += world_move.z * character.acceleration.0 * delta_time;
+    character.linear_velocity.x += world_move.x * (**character.acceleration) * delta_time;
+    character.linear_velocity.z += world_move.z * (**character.acceleration) * delta_time;
 
     // === JUMPING ===
-    if input.jump && character.grounded {
+    if character.grounded {
+        character.jump_timer.reset();
+    }
+
+    if input.jump && !character.jump_timer.finished() {
         character.linear_velocity.y = character.jump_impulse.0;
     }
 }
@@ -253,7 +271,7 @@ fn apply_gravity(
             velocity.y = velocity.y.min(0.0);
             velocity.y -= 2.0 * dt; // small extra downward force
         } else {
-            velocity.0 += gravity.0 * dt;
+            **velocity += **gravity * dt;
         }
     }
 }
@@ -261,8 +279,8 @@ fn apply_gravity(
 fn apply_movement_damping(mut query: Query<(&MovementDampingFactor, &mut LinearVelocity)>) {
     for (damping_factor, mut linear_velocity) in &mut query {
         // We could use `LinearDamping`, but we don't want to dampen movement along the Y axis
-        linear_velocity.x *= damping_factor.0;
-        linear_velocity.z *= damping_factor.0;
+        linear_velocity.x *= **damping_factor;
+        linear_velocity.z *= **damping_factor;
     }
 }
 
@@ -357,7 +375,7 @@ fn kinematic_controller_collisions(
                     let projected = linear_velocity.reject_from_normalized(slope_normal);
 
                     // Blend between original and projected velocity to avoid sticky/laggy edges
-                    linear_velocity.0 = linear_velocity.0.lerp(projected, 0.5);
+                    **linear_velocity = linear_velocity.lerp(projected, 0.5);
                 } else {
                     // The character is intersecting an unclimbable object, like a wall.
                     // We want the character to slide along the surface, similarly to
@@ -370,7 +388,7 @@ fn kinematic_controller_collisions(
 
                     // Slide along the surface, rejecting the velocity along the contact normal.
                     let impulse = linear_velocity.reject_from_normalized(normal);
-                    linear_velocity.0 = impulse;
+                    **linear_velocity = impulse;
                 }
             } else {
                 // The character is not yet intersecting the other object,
@@ -398,7 +416,7 @@ fn kinematic_controller_collisions(
                 } else {
                     // Avoid climbing up walls.
                     impulse.y = impulse.y.max(0.0);
-                    linear_velocity.0 -= impulse;
+                    **linear_velocity -= impulse;
                 }
             }
         }
