@@ -28,6 +28,7 @@ impl Plugin for KinematicCharacterPlugin {
             .register_type::<MovementDampingFactor>()
             .register_type::<JumpImpulse>()
             .register_type::<JumpTimer>()
+            .register_type::<GroundedCooldown>()
             .register_type::<ControllerGravity>()
             .register_type::<MaxSlopeAngle>();
 
@@ -70,6 +71,10 @@ pub struct JumpImpulse(Scalar);
 /// A timer used to allow late jumps when Grounded flickers.
 #[derive(Component, Debug, Default, Deref, DerefMut, Reflect)]
 pub struct JumpTimer(Timer);
+
+/// A cooldown timer used to prevent immediate re-grounding after a jump.
+#[derive(Component, Default, Debug, Deref, DerefMut, Reflect)]
+pub struct GroundedCooldown(Timer);
 
 /// The gravitational acceleration used for a character controller.
 #[derive(Component, Clone, Copy, Debug, Deref, DerefMut, Reflect)]
@@ -135,6 +140,7 @@ pub struct MovementBundle {
     damping: MovementDampingFactor,
     jump_impulse: JumpImpulse,
     jump_timer: JumpTimer,
+    ground_cooldown: GroundedCooldown,
     max_slope_angle: MaxSlopeAngle,
 }
 
@@ -145,6 +151,7 @@ impl Default for MovementBundle {
             damping: MovementDampingFactor(0.92),
             jump_impulse: JumpImpulse(7.0),
             jump_timer: JumpTimer(Timer::from_seconds(0.1, TimerMode::Once)),
+            ground_cooldown: GroundedCooldown(Timer::from_seconds(0.1, TimerMode::Once)),
             max_slope_angle: MaxSlopeAngle(Scalar::to_radians(80.0)),
         }
     }
@@ -179,12 +186,24 @@ impl MovementBundle {
 
 fn update_grounded(
     mut commands: Commands,
+    time: Res<Time>,
     mut query: Query<
-        (Entity, &ShapeHits, &Rotation, Option<&MaxSlopeAngle>),
+        (Entity, &ShapeHits, &Rotation, &mut GroundedCooldown, Option<&MaxSlopeAngle>),
         With<CharacterController>,
     >,
 ) {
-    for (entity, hits, rotation, max_slope_angle) in &mut query {
+    for (entity, hits, rotation, mut grounded_cooldown, max_slope_angle) in &mut query {
+        grounded_cooldown.tick(time.delta());
+        if grounded_cooldown.finished() {
+            // The cooldown has finished, so we can check for grounded state normally.
+        } else {
+            // Still in cooldown, so we are not grounded.
+            commands
+                .entity(entity)
+                .remove::<KinematicCharacterGrounded>();
+            continue;
+        }
+
         // The character is grounded if the shape caster has a hit with a normal
         // that isn't too steep.
         let is_grounded = hits.iter().any(|hit| {
@@ -221,6 +240,7 @@ struct CharacterQuery {
     acceleration: &'static MovementAcceleration,
     jump_impulse: &'static JumpImpulse,
     jump_timer: &'static mut JumpTimer,
+    grounded_cooldown: &'static mut GroundedCooldown,
     position: &'static Position,
     rotation: &'static Rotation,
     linear_velocity: &'static mut LinearVelocity,
@@ -252,6 +272,7 @@ fn apply_character_action(
 
     if input.jump && !character.jump_timer.finished() {
         character.linear_velocity.y = character.jump_impulse.0;
+        character.grounded_cooldown.reset();
     }
 }
 
