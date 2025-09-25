@@ -5,7 +5,6 @@ mod components;
 mod controller;
 mod network;
 mod progress;
-mod protocol;
 mod render;
 mod resources;
 mod states;
@@ -93,8 +92,8 @@ impl Plugin for LauncherPlugin {
             // state
             app.add_systems(
                 OnEnter(states::LauncherStates::Playing),
-                |mut ev_spawn: EventWriter<protocol::ClientSpawnPlayerEvent>| {
-                    ev_spawn.write(protocol::ClientSpawnPlayerEvent);
+                |mut ev_spawn: EventWriter<network::ClientSpawnPlayerEvent>| {
+                    ev_spawn.write(network::ClientSpawnPlayerEvent);
                 },
             );
         }

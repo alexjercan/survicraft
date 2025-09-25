@@ -1,7 +1,7 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use super::{protocol::*, states::*};
+use super::{states::*, controller::*};
 use crate::common::prelude::*;
 
 const DISCOVER_RADIUS: u32 = 5;

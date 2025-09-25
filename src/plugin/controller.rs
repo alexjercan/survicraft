@@ -1,14 +1,18 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
-use lightyear::input::{config::InputConfig, leafwing::prelude::*};
-use lightyear::prelude::*;
 use serde::{Deserialize, Serialize};
+use lightyear::prelude::*;
 
-use super::protocol::*;
+use super::network::*;
 use crate::prelude::*;
 
-pub struct PlayerControllerPlugin {
+/// Marker component for the player character entity. Spawn this when you
+/// want to attach a player bundle and have it be controlled by a player.
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+pub(super) struct PlayerController;
+
+pub(super) struct PlayerControllerPlugin {
     pub render: bool,
 }
 
@@ -17,13 +21,7 @@ impl Plugin for PlayerControllerPlugin {
         app.add_plugins(PhysicsCharacterPlugin);
         app.add_plugins(HeadControllerPlugin);
 
-        // Add input handling for network rebroadcasting
-        app.add_plugins(InputPlugin::<CharacterAction> {
-            config: InputConfig::<CharacterAction> {
-                rebroadcast_inputs: true,
-                ..default()
-            },
-        });
+        app.add_plugins(NetworkInputPlugin::<CharacterAction>::default());
         app.add_plugins(InputManagerPlugin::<HeadAction>::default());
 
         if self.render {
@@ -58,38 +56,37 @@ pub enum HeadAction {
 
 fn handle_spawn_player(
     mut commands: Commands,
-    mut q_receiver: Query<(Entity, &RemoteId, &mut MessageReceiver<ClientSpawnRequest>)>,
+    mut ev_spawn: EventReader<ServerSpawnPlayerEvent>,
     q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
 ) {
-    for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
-        for _ in receiver.receive() {
-            if q_player.iter().any(|(_, id)| id.0 == *peer) {
-                warn!(
-                    "Player with ID {:?} already has a character, ignoring spawn request",
-                    peer
-                );
-                continue;
-            }
-
-            debug!("Spawning player character for peer {:?}", peer);
-
-            commands.spawn((
-                PlayerId(*peer),
-                Name::new("Player"),
-                ActionState::<CharacterAction>::default(),
-                Position(Vec3::new(0.0, 3.0, 0.0)),
-                Rotation::default(),
-                Replicate::to_clients(NetworkTarget::All),
-                PredictionTarget::to_clients(NetworkTarget::All),
-                ControlledBy {
-                    owner: entity,
-                    lifetime: Lifetime::default(),
-                },
-                PlayerController,
-                PhysicsCharacterBundle::default(),
-                PhysicsCharacterInput::default(),
-            ));
+    for ServerSpawnPlayerEvent { owner, peer } in ev_spawn.read() {
+        if q_player.iter().any(|(_, id)| id.0 == *peer) {
+            warn!(
+                "Player with ID {:?} already has a character, ignoring spawn request",
+                peer
+            );
+            continue;
         }
+
+        debug!("Spawning player character for peer {:?}", peer);
+
+        commands.spawn((
+            Name::new("Player"),
+            PlayerController,
+            ActionState::<CharacterAction>::default(),
+            PhysicsCharacterInput::default(),
+            Position(Vec3::new(0.0, 3.0, 0.0)),
+            Rotation::default(),
+            PhysicsCharacterBundle::default(),
+            // Network related components
+            PlayerId(*peer),
+            Replicate::to_clients(NetworkTarget::All),
+            PredictionTarget::to_clients(NetworkTarget::All),
+            ControlledBy {
+                owner: *owner,
+                lifetime: Lifetime::default(),
+            },
+        ));
     }
 }
 
