@@ -2,12 +2,11 @@
 
 use avian3d::{math::AdjustPrecision, prelude::*};
 use bevy::{ecs::query::QueryData, prelude::*};
-use super::{constants::*, components::*};
+
+use super::{components::*, constants::*};
 
 pub mod prelude {
-    pub use super::{
-        PhysicsCharacterBundle, PhysicsCharacterPlugin,
-    };
+    pub use super::{PhysicsCharacterBundle, PhysicsCharacterPlugin};
 }
 
 #[cfg(feature = "debug")]

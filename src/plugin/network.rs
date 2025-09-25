@@ -9,17 +9,20 @@ use avian3d::prelude::*;
 use bevy::{prelude::*, reflect::GetTypeRegistration};
 use leafwing_input_manager::prelude::*;
 use lightyear::{
-    connection::host::HostClient, input::config::InputConfig, netcode::{Key, NetcodeClient, NetcodeServer}, prelude::{
+    connection::host::HostClient,
+    input::config::InputConfig,
+    netcode::{Key, NetcodeClient, NetcodeServer},
+    prelude::{
         client::ClientPlugins,
         input::leafwing::InputPlugin,
         server::{ClientOf, ServerPlugins, ServerUdpIo, Start},
         *,
-    }
+    },
 };
-use serde::{de::DeserializeOwned, Serialize, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use super::{controller::*, resources::*, states::*};
 use crate::prelude::*;
-use super::{resources::*, states::*, controller::*};
 
 // --- Contants ---
 
@@ -365,18 +368,18 @@ trait LeafwingUserAction:
 }
 
 impl<
-    A: Serialize
-        + DeserializeOwned
-        + Clone
-        + PartialEq
-        + Send
-        + Sync
-        + Debug
-        + 'static
-        + Copy
-        + Actionlike
-        + GetTypeRegistration,
-> LeafwingUserAction for A
+        A: Serialize
+            + DeserializeOwned
+            + Clone
+            + PartialEq
+            + Send
+            + Sync
+            + Debug
+            + 'static
+            + Copy
+            + Actionlike
+            + GetTypeRegistration,
+    > LeafwingUserAction for A
 {
 }
 
@@ -654,7 +657,10 @@ fn on_server_spawn_request(
         for _ in receiver.receive() {
             debug!("Received spawn request for player {:?}", peer);
 
-            ev_spawn.write(ServerSpawnPlayerEvent { owner: entity, peer: *peer });
+            ev_spawn.write(ServerSpawnPlayerEvent {
+                owner: entity,
+                peer: *peer,
+            });
         }
     }
 }

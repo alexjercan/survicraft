@@ -24,7 +24,7 @@ impl Default for WASDCameraControllerBundle {
     fn default() -> Self {
         Self {
             camera: WASDCamera {
-                wasd_sensitivity: 2.0,
+                wasd_sensitivity: 0.1,
                 ..default()
             },
             input: WASDCameraInput::default(),

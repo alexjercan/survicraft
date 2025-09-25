@@ -3,7 +3,10 @@ mod helpers;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
-use helpers::controller::{PlayerController, PlayerControllerPlugin};
+use helpers::{
+    wasd::{WASDCameraControllerBundle, WASDCameraControllerPlugin},
+    PlayerController,
+};
 use survicraft::prelude::*;
 
 #[derive(Parser)]
@@ -20,7 +23,7 @@ fn main() {
     app.add_plugins(PhysicsPlugins::default().build());
 
     app.add_systems(Startup, setup);
-    app.add_plugins(PlayerControllerPlugin { render: true });
+    app.add_plugins(WASDCameraControllerPlugin);
 
     app.add_systems(Startup, setup_item_assets);
     app.add_systems(Startup, setup_recipe_assets);
@@ -44,13 +47,10 @@ fn setup(
     ));
 
     commands.spawn((
-        PlayerController,
-        Transform::from_xyz(0.0, 3.0, 0.0),
         Name::new("Player Character"),
-        Position(Vec3::new(0.0, 3.0, 0.0)),
-        Rotation::default(),
-        PhysicsCharacterBundle::default(),
-        PhysicsCharacterInput::default(),
+        Camera3d::default(),
+        PlayerController,
+        WASDCameraControllerBundle::default(),
     ));
 
     const FLOOR_WIDTH: f32 = 20.0;

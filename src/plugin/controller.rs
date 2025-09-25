@@ -1,8 +1,8 @@
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
-use serde::{Deserialize, Serialize};
 use lightyear::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use super::network::*;
 use crate::prelude::*;

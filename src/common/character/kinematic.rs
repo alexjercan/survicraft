@@ -188,7 +188,13 @@ fn update_grounded(
     mut commands: Commands,
     time: Res<Time>,
     mut query: Query<
-        (Entity, &ShapeHits, &Rotation, &mut GroundedCooldown, Option<&MaxSlopeAngle>),
+        (
+            Entity,
+            &ShapeHits,
+            &Rotation,
+            &mut GroundedCooldown,
+            Option<&MaxSlopeAngle>,
+        ),
         With<CharacterController>,
     >,
 ) {

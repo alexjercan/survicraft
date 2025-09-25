@@ -4,11 +4,6 @@ use leafwing_input_manager::prelude::*;
 use serde::{Deserialize, Serialize};
 use survicraft::prelude::*;
 
-/// Marker component for the player character entity. Spawn this when you
-/// want to attach a player bundle and have it be controlled by a player.
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PlayerController;
-
 pub struct PlayerControllerPlugin {
     pub dynamic: bool,
     pub render: bool,
@@ -56,7 +51,10 @@ pub enum HeadAction {
     Look,
 }
 
-fn on_add_player_controller(trigger: Trigger<OnAdd, PlayerController>, mut commands: Commands) {
+fn on_add_player_controller(
+    trigger: Trigger<OnAdd, super::PlayerController>,
+    mut commands: Commands,
+) {
     let entity = trigger.target();
 
     commands.spawn((
@@ -99,7 +97,7 @@ fn update_head_input(mut q_head: Query<(&mut HeadControllerInput, &ActionState<H
 }
 
 fn sync_character_rotation(
-    mut q_player: Query<&mut Rotation, With<PlayerController>>,
+    mut q_player: Query<&mut Rotation, With<super::PlayerController>>,
     q_head: Query<(&Transform, &HeadControllerTarget), With<HeadController>>,
 ) {
     for (transform, &HeadControllerTarget(target)) in q_head.iter() {
@@ -125,7 +123,7 @@ impl Plugin for PlayerRenderPlugin {
 }
 
 fn handle_render_player(
-    q_player: Query<Entity, Added<PlayerController>>,
+    q_player: Query<Entity, Added<super::PlayerController>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,

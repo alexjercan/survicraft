@@ -7,14 +7,13 @@ mod network;
 mod progress;
 mod render;
 mod resources;
+mod setup;
 mod states;
 mod ui;
 mod world;
-mod setup;
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
-
 pub use setup::{new_gui_app, new_headless_app};
 
 pub struct LauncherPlugin {

@@ -3,7 +3,7 @@ mod helpers;
 use avian3d::prelude::*;
 use bevy::prelude::*;
 use clap::Parser;
-use helpers::controller::{PlayerController, PlayerControllerPlugin};
+use helpers::{controller::PlayerControllerPlugin, PlayerController};
 use survicraft::prelude::*;
 
 #[derive(Parser)]
