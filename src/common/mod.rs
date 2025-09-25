@@ -5,7 +5,6 @@ mod chat;
 mod chunk_map;
 mod features;
 mod main_menu;
-mod setup;
 mod terrain;
 mod tilemap;
 
@@ -17,7 +16,6 @@ pub mod prelude {
     pub use super::chunk_map::prelude::*;
     pub use super::features::prelude::*;
     pub use super::main_menu::prelude::*;
-    pub use super::setup::prelude::*;
     pub use super::terrain::prelude::*;
     pub use super::tilemap::prelude::*;
 }

@@ -35,3 +35,10 @@ cargo run --bin survicraftd
     - I want the storage system to not have a UI, but rather be more graphical, you should be able to have something like a chest,
     and you should place items inside, the placed items will not have physics, but then you should be able to take them and drop them
     to add physics to them another idea is to have a backpack on which you can attach items, and it should work kind of similar
+- [ ] build workflows for different OS
+    - How can I get wasm to work (for the client)
+- [ ] better character controller
+    - try to use kinematic approach
+- [ ] Markup language for assets (as described in the comments of the assets)
+- [ ] Chat commands for "cheating" like spawning items or teleporting etc.
+- [ ] somehow more modding support: I would like the core of the game to be a "mod" so that new things can get added more easily

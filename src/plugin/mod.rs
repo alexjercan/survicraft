@@ -11,11 +11,12 @@ mod resources;
 mod states;
 mod ui;
 mod world;
+mod setup;
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::*;
+pub use setup::{new_gui_app, new_headless_app};
 
 pub struct LauncherPlugin {
     pub render: bool,
@@ -23,7 +24,7 @@ pub struct LauncherPlugin {
 
 impl LauncherPlugin {
     fn is_dedicated_server(&self, app: &App) -> bool {
-        app.is_plugin_added::<DedicatedServerPlugin>()
+        app.is_plugin_added::<setup::DedicatedServerPlugin>()
     }
 }
 
