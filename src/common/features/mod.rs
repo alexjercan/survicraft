@@ -15,13 +15,8 @@ pub mod prelude {
     pub use super::FeaturesPlugin;
 }
 
+#[derive(Default)]
 pub struct FeaturesPlugin {}
-
-impl Default for FeaturesPlugin {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl Plugin for FeaturesPlugin {
     fn build(&self, app: &mut App) {

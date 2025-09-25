@@ -5,8 +5,8 @@
 //! certain radius, and a system to handle the discovery of tiles and chunks.
 
 // mod hexmap;
-mod tilemap;
+mod gridmap;
 
 pub mod prelude {
-    pub use super::tilemap::*;
+    pub use super::gridmap::*;
 }

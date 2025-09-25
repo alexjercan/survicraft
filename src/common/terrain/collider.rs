@@ -34,7 +34,7 @@ fn generate_chunk_collider(
             RigidBody::Static,
         ));
 
-        if let Some(parent) = q_chunks.get(*parent).ok() {
+        if let Ok(parent) = q_chunks.get(*parent) {
             commands.entity(parent).insert(ChunkReady);
         }
     }

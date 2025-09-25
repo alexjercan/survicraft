@@ -18,11 +18,11 @@ impl TerrainAssets {
             .find(|tile| {
                 tile.generation
                     .elevation_min
-                    .map_or(true, |min| elevation >= min)
+                    .is_none_or(|min| elevation >= min)
                     && tile
                         .generation
                         .elevation_max
-                        .map_or(true, |max| elevation <= max)
+                        .is_none_or(|max| elevation <= max)
             })
             .map(|tile| tile.id.clone())
     }

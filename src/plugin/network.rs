@@ -767,7 +767,7 @@ fn receive_server_chat_message(
     for mut receiver in q_receiver.iter_mut() {
         for message in receiver.receive() {
             ev_chat.write(ServerChatMessageEvent {
-                sender: message.sender.clone(),
+                sender: message.sender,
                 message: message.message.clone(),
             });
         }

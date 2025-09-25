@@ -196,7 +196,7 @@ fn generate_chunks(
         );
 
         for center in chunks {
-            if let Some(_) = storage.get_chunk(center) {
+            if storage.get_chunk(center).is_some() {
                 continue;
             }
             trace!("Spawning new chunk at center {:?}", center);

@@ -5,13 +5,8 @@ use bevy::prelude::*;
 use super::{components::*, resources::*};
 use crate::common::prelude::*;
 
+#[derive(Default)]
 pub struct FeaturesRenderPlugin {}
-
-impl Default for FeaturesRenderPlugin {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl Plugin for FeaturesRenderPlugin {
     fn build(&self, app: &mut App) {
@@ -43,7 +38,7 @@ fn handle_feature_tile(
             continue;
         };
 
-        let Some(variant) = feature_asset.get_variant(&**tile) else {
+        let Some(variant) = feature_asset.get_variant(tile) else {
             continue;
         };
 

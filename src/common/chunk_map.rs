@@ -134,7 +134,7 @@ fn create_task<T, U, F>(
             for (child_entity, input) in chunk {
                 let value = func.get(input);
                 command_queue.push(move |world: &mut World| {
-                    world.entity_mut(child_entity).insert(U::from(value));
+                    world.entity_mut(child_entity).insert(value);
                 });
             }
 

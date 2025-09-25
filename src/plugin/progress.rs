@@ -58,6 +58,6 @@ fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProg
     );
     Progress {
         done: terrain_progress.generated_chunks,
-        total: total,
+        total,
     }
 }

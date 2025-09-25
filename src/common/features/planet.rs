@@ -87,7 +87,7 @@ impl ChunkMapFunction<(TileCoord, Tile), TileFeature> for PlanetFeatures {
         let abundance_val = (abundance_val + 1.0) * 0.5;
 
         let feature = self.map.features[feature_index].clone();
-        let variant = feature.get_variant(&*tile);
+        let variant = feature.get_variant(&tile);
 
         if let Some(variant) = variant {
             if variant.threshold <= abundance_val {
@@ -95,6 +95,6 @@ impl ChunkMapFunction<(TileCoord, Tile), TileFeature> for PlanetFeatures {
             }
         }
 
-        return TileFeature(None);
+        TileFeature(None)
     }
 }

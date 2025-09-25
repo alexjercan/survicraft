@@ -71,7 +71,7 @@ impl GeometrySettings {
             let v2 = base + Vec2::new(-half_size.x, half_size.y);
             let v3 = base + Vec2::new(half_size.x, half_size.y);
 
-            let ns = vec![
+            let ns = [
                 IVec2::new(0, 0),
                 IVec2::new(-1, -1),
                 IVec2::new(0, -1),
@@ -90,7 +90,7 @@ impl GeometrySettings {
             };
             let v0 = Vec3::new(v0.x, h as f32, v0.y);
 
-            let ns = vec![
+            let ns = [
                 IVec2::new(0, 0),
                 IVec2::new(1, -1),
                 IVec2::new(0, -1),
@@ -109,7 +109,7 @@ impl GeometrySettings {
             };
             let v1 = Vec3::new(v1.x, h as f32, v1.y);
 
-            let ns = vec![
+            let ns = [
                 IVec2::new(0, 0),
                 IVec2::new(-1, 1),
                 IVec2::new(0, 1),
@@ -128,7 +128,7 @@ impl GeometrySettings {
             };
             let v2 = Vec3::new(v2.x, h as f32, v2.y);
 
-            let ns = vec![
+            let ns = [
                 IVec2::new(0, 0),
                 IVec2::new(1, 1),
                 IVec2::new(0, 1),

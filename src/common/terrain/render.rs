@@ -99,7 +99,7 @@ fn generate_chunk_render(
                     let q_offset = local.x + layout.chunk_radius as i32;
                     let r_offset = local.y + layout.chunk_radius as i32;
                     let index = (r_offset * size as i32 + q_offset) as usize;
-                    height_data[index] = assets.get_tile_index(&**tile).map_or(-1, |i| i as i32);
+                    height_data[index] = assets.get_tile_index(tile).map_or(-1, |i| i as i32);
                 }
             }
 
