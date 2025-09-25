@@ -10,17 +10,27 @@ use survicraft::prelude::*;
 #[command(name = "survicraft-character")]
 #[command(version = "0.1")]
 #[command(about = "Example for the survicraft character controller", long_about = None)]
-struct Cli;
+struct Cli {
+    #[arg(short, long, default_value_t = false)]
+    dynamic: bool,
+}
+
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ExampleIsDynamic(bool);
 
 fn main() {
-    let _ = Cli::parse();
+    let cli = Cli::parse();
 
     let mut app = new_gui_app();
 
     app.add_plugins(PhysicsPlugins::default().build());
 
     app.add_systems(Startup, setup);
-    app.add_plugins(PlayerControllerPlugin { render: true });
+    app.add_plugins(PlayerControllerPlugin {
+        dynamic: cli.dynamic,
+        render: true,
+    });
+    app.insert_resource(ExampleIsDynamic(cli.dynamic));
 
     app.run();
 }
@@ -29,6 +39,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    is_dynamic: Res<ExampleIsDynamic>,
 ) {
     commands.spawn((
         DirectionalLight::default(),
@@ -36,15 +47,29 @@ fn setup(
         Name::new("Directional Light"),
     ));
 
-    commands.spawn((
-        PlayerController,
-        Transform::from_xyz(0.0, 3.0, 0.0),
-        Name::new("Player Character"),
-        Position(Vec3::new(0.0, 3.0, 0.0)),
-        Rotation::default(),
-        PhysicsCharacterBundle::default(),
-        PhysicsCharacterInput::default(),
-    ));
+    if is_dynamic.0 {
+        info!("Using dynamic physics character controller");
+        commands.spawn((
+            PlayerController,
+            Transform::from_xyz(0.0, 3.0, 0.0),
+            Name::new("Dynamic Player Character"),
+            Position(Vec3::new(0.0, 3.0, 0.0)),
+            Rotation::default(),
+            PhysicsCharacterBundle::default(),
+            CharacterInput::default(),
+        ));
+    } else {
+        info!("Using kinematic physics character controller");
+        commands.spawn((
+            PlayerController,
+            Transform::from_xyz(0.0, 3.0, 0.0),
+            Name::new("Kinematic Player Character"),
+            Position(Vec3::new(0.0, 3.0, 0.0)),
+            Rotation::default(),
+            KinematicCharacterBundle::default(),
+            CharacterInput::default(),
+        ));
+    }
 
     const FLOOR_WIDTH: f32 = 20.0;
     const FLOOR_HEIGHT: f32 = 1.0;

@@ -1,0 +1,2 @@
+pub const CHARACTER_CAPSULE_RADIUS: f32 = 0.5;
+pub const CHARACTER_CAPSULE_HEIGHT: f32 = 1.0;

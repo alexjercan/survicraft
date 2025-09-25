@@ -18,7 +18,7 @@ pub(super) struct PlayerControllerPlugin {
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(PhysicsCharacterPlugin);
+        app.add_plugins(KinematicCharacterPlugin);
         app.add_plugins(HeadControllerPlugin);
 
         app.add_plugins(NetworkInputPlugin::<CharacterAction>::default());
@@ -74,10 +74,10 @@ fn handle_spawn_player(
             Name::new("Player"),
             PlayerController,
             ActionState::<CharacterAction>::default(),
-            PhysicsCharacterInput::default(),
+            CharacterInput::default(),
             Position(Vec3::new(0.0, 3.0, 0.0)),
             Rotation::default(),
-            PhysicsCharacterBundle::default(),
+            KinematicCharacterBundle::default(),
             // Network related components
             PlayerId(*peer),
             Replicate::to_clients(NetworkTarget::All),
@@ -98,11 +98,11 @@ fn on_add_player_controller(
     >,
 ) {
     for (entity, PlayerId(peer), is_controlled) in &q_player {
-        debug!("Adding PhysicsCharacterBundle to entity {entity:?}");
+        debug!("Adding KinematicCharacterBundle to entity {entity:?}");
 
         commands.entity(entity).insert((
-            PhysicsCharacterBundle::default(),
-            PhysicsCharacterInput::default(),
+            KinematicCharacterBundle::default(),
+            CharacterInput::default(),
         ));
 
         if is_controlled {
@@ -146,7 +146,7 @@ fn add_head_controller_to_new_players(
     for (entity, PlayerId(peer)) in &q_head {
         let player = match q_player.iter().find(|(_, id)| id.0 == *peer) {
             Some((e, _)) => e,
-            None => {
+            _ => {
                 error!("No player entity found for HeadControllerMarker with PlayerId {peer:?}");
                 continue;
             }
@@ -158,7 +158,7 @@ fn add_head_controller_to_new_players(
 }
 
 fn update_character_input(
-    mut q_player: Query<(&mut PhysicsCharacterInput, &ActionState<CharacterAction>)>,
+    mut q_player: Query<(&mut CharacterInput, &ActionState<CharacterAction>)>,
 ) {
     for (mut input, action_state) in q_player.iter_mut() {
         input.move_axis = action_state.axis_pair(&CharacterAction::Move);

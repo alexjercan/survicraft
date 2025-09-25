@@ -10,12 +10,17 @@ use survicraft::prelude::*;
 pub struct PlayerController;
 
 pub struct PlayerControllerPlugin {
+    pub dynamic: bool,
     pub render: bool,
 }
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(PhysicsCharacterPlugin);
+        if self.dynamic {
+            app.add_plugins(PhysicsCharacterPlugin);
+        } else {
+            app.add_plugins(KinematicCharacterPlugin);
+        }
         app.add_plugins(HeadControllerPlugin);
 
         app.add_plugins(InputManagerPlugin::<CharacterAction>::default());
@@ -79,7 +84,7 @@ fn on_add_player_controller(trigger: Trigger<OnAdd, PlayerController>, mut comma
 }
 
 fn update_character_input(
-    mut q_player: Query<(&mut PhysicsCharacterInput, &ActionState<CharacterAction>)>,
+    mut q_player: Query<(&mut CharacterInput, &ActionState<CharacterAction>)>,
 ) {
     for (mut input, action_state) in q_player.iter_mut() {
         input.move_axis = action_state.axis_pair(&CharacterAction::Move);

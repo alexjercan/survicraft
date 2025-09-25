@@ -2,25 +2,22 @@
 
 use avian3d::{math::AdjustPrecision, prelude::*};
 use bevy::{ecs::query::QueryData, prelude::*};
+use super::{constants::*, components::*};
 
 pub mod prelude {
     pub use super::{
-        PhysicsCharacterBundle, PhysicsCharacterInput, PhysicsCharacterPlugin,
-        CHARACTER_CAPSULE_HEIGHT, CHARACTER_CAPSULE_RADIUS,
+        PhysicsCharacterBundle, PhysicsCharacterPlugin,
     };
 }
 
 #[cfg(feature = "debug")]
 use self::debug::PlayerDebugPlugin;
 
-pub const CHARACTER_CAPSULE_RADIUS: f32 = 0.5;
-pub const CHARACTER_CAPSULE_HEIGHT: f32 = 1.0;
-
 pub struct PhysicsCharacterPlugin;
 
 impl Plugin for PhysicsCharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<PhysicsCharacterInput>();
+        app.register_type::<CharacterInput>();
 
         #[cfg(feature = "debug")]
         app.add_plugins(PlayerDebugPlugin);
@@ -37,10 +34,6 @@ impl Plugin for PhysicsCharacterPlugin {
     }
 }
 
-/// A marker component indicating that an entity is using a character controller.
-#[derive(Component)]
-pub struct PhysicsCharacterController;
-
 /// A marker component indicating that an entity is on the ground.
 #[derive(Component)]
 #[component(storage = "SparseSet")]
@@ -48,7 +41,7 @@ pub struct PhysicsCharacterGrounded;
 
 #[derive(Bundle)]
 pub struct PhysicsCharacterBundle {
-    controller: PhysicsCharacterController,
+    controller: CharacterController,
     collider: Collider,
     rigid_body: RigidBody,
     external_force: ExternalForce,
@@ -65,7 +58,7 @@ impl Default for PhysicsCharacterBundle {
         caster_shape.set_scale(Vec3::ONE * 0.99, 10);
 
         Self {
-            controller: PhysicsCharacterController,
+            controller: CharacterController,
             collider,
             rigid_body: RigidBody::Dynamic,
             external_force: ExternalForce::ZERO.with_persistence(false),
@@ -81,15 +74,9 @@ impl Default for PhysicsCharacterBundle {
     }
 }
 
-#[derive(Component, Clone, Copy, Debug, Default, Reflect)]
-pub struct PhysicsCharacterInput {
-    pub move_axis: Vec2,
-    pub jump: bool,
-}
-
 fn update_grounded(
     mut commands: Commands,
-    mut q_controller: Query<(Entity, &ShapeHits), With<PhysicsCharacterController>>,
+    mut q_controller: Query<(Entity, &ShapeHits), With<CharacterController>>,
 ) {
     for (entity, hits) in &mut q_controller {
         // The character is grounded if the shape caster has a hit with a normal
@@ -106,7 +93,7 @@ fn update_grounded(
 
 fn handle_character_actions(
     time: Res<Time>,
-    mut q_player: Query<(&PhysicsCharacterInput, CharacterQuery)>,
+    mut q_player: Query<(&CharacterInput, CharacterQuery)>,
 ) {
     for (input, mut character) in &mut q_player {
         apply_character_action(&time, input, &mut character);
@@ -126,7 +113,7 @@ struct CharacterQuery {
 /// Apply the character actions `action_state` to the character entity `character`.
 fn apply_character_action(
     time: &Res<Time>,
-    input: &PhysicsCharacterInput,
+    input: &CharacterInput,
     character: &mut CharacterQueryItem,
 ) {
     // TODO: unhardcode these values
@@ -149,7 +136,7 @@ fn apply_character_action(
     }
 }
 
-fn apply_movement_damping(mut query: Query<&mut LinearVelocity, With<PhysicsCharacterController>>) {
+fn apply_movement_damping(mut query: Query<&mut LinearVelocity, With<CharacterController>>) {
     let damping_factor = 0.92;
     for mut linear_velocity in &mut query {
         linear_velocity.x *= damping_factor;
@@ -168,7 +155,7 @@ mod debug {
         }
     }
 
-    fn log_player_character_state(q_player: Query<CharacterQuery, With<PhysicsCharacterInput>>) {
+    fn log_player_character_state(q_player: Query<CharacterQuery, With<CharacterInput>>) {
         for character in &q_player {
             trace!(
                 "PlayerController {:?}: LinearVelocity={:?}, Position={:?}, Rotation={:?}",
