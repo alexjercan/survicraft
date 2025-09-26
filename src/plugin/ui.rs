@@ -1,7 +1,7 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::view::RenderLayers};
 use bevy_simple_text_input::TextInputPlugin;
 
-use super::{resources::*, states::*};
+use super::{progress::*, resources::*, states::*};
 use crate::prelude::*;
 
 pub(super) struct UIPlugin;
@@ -24,10 +24,14 @@ impl Plugin for UIPlugin {
         app.add_systems(OnEnter(LauncherStates::Connecting), setup_connecting_ui);
 
         // Setup the loading UI for the Loading state
-        app.add_systems(OnEnter(LauncherStates::Generating), setup_loading_ui);
+        app.add_systems(OnEnter(LauncherStates::Generating), setup_generating_ui);
+        app.add_systems(
+            Update,
+            update_generating_ui.run_if(in_state(LauncherStates::Generating)),
+        );
 
         // Chat setup. We set up chat UI and related systems.
-        app.add_systems(OnEnter(LauncherStates::Playing), setup_chat);
+        app.add_systems(OnEnter(LauncherStates::Playing), setup_playing_ui);
         app.add_plugins(ChatPlugin);
     }
 }
@@ -94,13 +98,104 @@ fn handle_multiplayer_pressed(
     }
 }
 
-fn setup_connecting_ui() {}
+fn setup_connecting_ui(mut commands: Commands) {
+    commands.spawn((
+        Name::new("CameraConnectingUI"),
+        Camera2d,
+        StateScoped(LauncherStates::Connecting),
+    ));
 
-fn setup_loading_ui() {
-    // TODO: Implement a proper loading UI
+    commands.spawn((
+        Name::new("ConnectingUIRoot"),
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        StateScoped(LauncherStates::Connecting),
+    ));
 }
 
-fn setup_chat(mut commands: Commands) {
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct GeneratingUIProgressBar;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct GeneratingUIProgressFill;
+
+fn setup_generating_ui(mut commands: Commands) {
+    commands.spawn((
+        Name::new("CameraLoadingUI"),
+        Camera2d,
+        StateScoped(LauncherStates::Generating),
+    ));
+
+    commands
+        .spawn((
+            Name::new("GeneratingUIRoot"),
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+            StateScoped(LauncherStates::Generating),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn((
+                    Name::new("GeneratingProgressBar"),
+                    GeneratingUIProgressBar,
+                    Node {
+                        width: Val::Px(300.0),
+                        height: Val::Px(30.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.1, 0.1, 0.1)),
+                ))
+                .with_children(|parent| {
+                    parent.spawn((
+                        Name::new("GeneratingProgressFill"),
+                        GeneratingUIProgressFill,
+                        Node {
+                            width: Val::Percent(0.0), // Start with 0% width
+                            height: Val::Percent(100.0),
+                            ..default()
+                        },
+                        BackgroundColor(Color::srgb(0.2, 0.7, 0.2)),
+                    ));
+                });
+        });
+}
+
+fn update_generating_ui(
+    terrain_progress: Res<ProgressGeneration>,
+    mut q_fill: Query<&mut Node, With<GeneratingUIProgressFill>>,
+) {
+    if terrain_progress.is_changed() {
+        for mut node in &mut q_fill {
+            node.width = Val::Percent(terrain_progress.clamp(0.0, 1.0) * 100.0);
+        }
+    }
+}
+
+fn setup_playing_ui(mut commands: Commands) {
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 1,
+            ..default()
+        },
+        Name::new("UI Camera"),
+        RenderLayers::layer(1),
+        StateScoped(LauncherStates::Playing),
+    ));
+
     commands
         .spawn((
             Name::new("ChatUIRoot"),
@@ -146,4 +241,20 @@ fn setup_chat(mut commands: Commands) {
                 },
             ));
         });
+
+    // --- Status bar in top-right for FPS, latency, etc ---
+    commands.spawn((
+        Name::new("StatusBarUIRoot"),
+        StatusBarRoot,
+        Node {
+            width: Val::Auto,
+            height: Val::Auto,
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.0),
+            right: Val::Px(10.0),
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::FlexEnd,
+            ..default()
+        },
+    ));
 }

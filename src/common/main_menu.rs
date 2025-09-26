@@ -13,8 +13,9 @@ use crate::common::prelude::*;
 
 pub mod prelude {
     pub use super::{
-        ClientMultiplayerClickEvent, ClientPlayClickEvent, DisplayQualitySetting, MainMenuIcons,
-        MainMenuPlugin, MainMenuRoot, PlayerNameSetting, VolumeSetting,
+        ClientMultiplayerClickEvent, ClientPlayClickEvent, DisplayFPSSetting,
+        DisplayLatencySetting, DisplayQualitySetting, MainMenuIcons, MainMenuPlugin, MainMenuRoot,
+        PlayerNameSetting, VolumeSetting,
     };
 }
 
@@ -24,6 +25,12 @@ pub enum DisplayQualitySetting {
     Medium,
     High,
 }
+
+#[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy, Deref, DerefMut)]
+pub struct DisplayFPSSetting(pub bool);
+
+#[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy, Deref, DerefMut)]
+pub struct DisplayLatencySetting(pub bool);
 
 #[derive(Resource, Debug, Component, PartialEq, Eq, Clone, Copy, Deref, DerefMut)]
 pub struct VolumeSetting(pub u32);
@@ -52,6 +59,9 @@ const BORDER_COLOR_ACTIVE: Color = Color::srgb(0.75, 0.52, 0.99);
 const BACKGROUND_COLOR: Color = Color::srgb(0.15, 0.15, 0.15);
 
 const TEXT_COLOR: Color = Color::srgb(0.9, 0.9, 0.9);
+
+const TEXT_YES: &str = "Yes";
+const TEXT_NO: &str = "No";
 
 /// Marker component for the root UI node
 /// Add this component to an entity to make it the root of the UI and spawn the main menu
@@ -127,6 +137,8 @@ impl Plugin for MainMenuPlugin {
         app.init_state::<MenuState>();
 
         app.insert_resource(DisplayQualitySetting::Medium);
+        app.insert_resource(DisplayFPSSetting(true));
+        app.insert_resource(DisplayLatencySetting(true));
         app.insert_resource(VolumeSetting(7));
         app.insert_resource(PlayerNameSetting::default());
 
@@ -151,6 +163,9 @@ impl Plugin for MainMenuPlugin {
             Update,
             (
                 setting_button::<DisplayQualitySetting>
+                    .run_if(in_state(MenuState::SettingsDisplay)),
+                setting_button::<DisplayFPSSetting>.run_if(in_state(MenuState::SettingsDisplay)),
+                setting_button::<DisplayLatencySetting>
                     .run_if(in_state(MenuState::SettingsDisplay)),
                 setting_button::<VolumeSetting>.run_if(in_state(MenuState::SettingsSound)),
                 name_settings_menu_update.run_if(in_state(MenuState::SettingsName)),
@@ -452,14 +467,25 @@ fn new_game_menu_setup(
                                 ..default()
                             },
                         ));
+
+                        // Display the back and play buttons
+                        parent
+                            .spawn((
+                                Button,
+                                button_node.clone(),
+                                BackgroundColor(NORMAL_BUTTON),
+                                MenuButtonAction::Play,
+                            ))
+                            .with_child((Text::new("Start"), button_text_style.clone()));
+
                         parent
                             .spawn((
                                 Button,
                                 button_node,
                                 BackgroundColor(NORMAL_BUTTON),
-                                MenuButtonAction::Play,
+                                MenuButtonAction::BackToMainMenu,
                             ))
-                            .with_child((Text::new("Start"), button_text_style));
+                            .with_child((Text::new("Back"), button_text_style));
                     });
             });
     });
@@ -632,6 +658,8 @@ fn settings_menu_setup(
 fn display_settings_menu_setup(
     mut commands: Commands,
     display_quality: Res<DisplayQualitySetting>,
+    display_fps: Res<DisplayFPSSetting>,
+    display_latency: Res<DisplayLatencySetting>,
     root: Single<Entity, (With<MainMenuRoot>, Added<MainMenuRoot>)>,
 ) {
     let button_node = Node {
@@ -709,6 +737,71 @@ fn display_settings_menu_setup(
                                         ));
                                     });
                                     if *display_quality == quality_setting {
+                                        entity.insert(SelectedOption);
+                                    }
+                                }
+                            });
+                        // Option to toggle FPS display on/off could go here
+                        parent
+                            .spawn((Node {
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },))
+                            .with_children(|parent| {
+                                parent.spawn((Text::new("Show FPS"), button_text_style.clone()));
+
+                                // Display a button for each possible value
+                                for fps_setting in [(true, TEXT_YES), (false, TEXT_NO)] {
+                                    let mut entity = parent.spawn((
+                                        Button,
+                                        Node {
+                                            width: Val::Px(150.0),
+                                            height: Val::Px(65.0),
+                                            ..button_node.clone()
+                                        },
+                                        BackgroundColor(NORMAL_BUTTON),
+                                        DisplayFPSSetting(fps_setting.0),
+                                    ));
+                                    entity.with_children(|parent| {
+                                        parent.spawn((
+                                            Text::new(fps_setting.1),
+                                            button_text_style.clone(),
+                                        ));
+                                    });
+                                    if **display_fps == fps_setting.0 {
+                                        entity.insert(SelectedOption);
+                                    }
+                                }
+                            });
+                        // Option to toggle latency display on/off could go here
+                        parent
+                            .spawn((Node {
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },))
+                            .with_children(|parent| {
+                                parent
+                                    .spawn((Text::new("Show Latency"), button_text_style.clone()));
+
+                                // Display a button for each possible value
+                                for latency_setting in [(true, TEXT_YES), (false, TEXT_NO)] {
+                                    let mut entity = parent.spawn((
+                                        Button,
+                                        Node {
+                                            width: Val::Px(150.0),
+                                            height: Val::Px(65.0),
+                                            ..button_node.clone()
+                                        },
+                                        BackgroundColor(NORMAL_BUTTON),
+                                        DisplayLatencySetting(latency_setting.0),
+                                    ));
+                                    entity.with_children(|parent| {
+                                        parent.spawn((
+                                            Text::new(latency_setting.1),
+                                            button_text_style.clone(),
+                                        ));
+                                    });
+                                    if **display_latency == latency_setting.0 {
                                         entity.insert(SelectedOption);
                                     }
                                 }

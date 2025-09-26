@@ -12,6 +12,7 @@ mod states;
 mod ui;
 mod world;
 mod inventory;
+mod status;
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -54,6 +55,7 @@ impl Plugin for LauncherPlugin {
         app.init_state::<states::LauncherStates>();
         app.enable_state_scoped_entities::<states::LauncherStates>();
 
+        // Add core plugins
         app.add_plugins(network::NetworkPlugin { dedicated });
         app.add_plugins(progress::LauncherProgressPlugin);
         if !dedicated {
@@ -76,6 +78,7 @@ impl Plugin for LauncherPlugin {
         app.add_plugins(inventory::GameInventoryPlugin {
             render: self.render,
         });
+        app.add_plugins(status::StatusPlugin);
         if self.render {
             app.add_plugins(render::CommonRendererPlugin);
         }

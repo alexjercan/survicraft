@@ -4,6 +4,9 @@ use iyes_progress::prelude::*;
 use super::{network::*, states::*};
 use crate::prelude::*;
 
+#[derive(Resource, Clone, Debug, Default, Deref, DerefMut)]
+pub(super) struct ProgressGeneration(pub f32);
+
 pub(super) struct LauncherProgressPlugin;
 
 impl Plugin for LauncherProgressPlugin {
@@ -21,6 +24,7 @@ impl Plugin for LauncherProgressPlugin {
                 .run_if(in_state(LauncherStates::Connecting)),
         );
 
+        app.insert_resource(ProgressGeneration::default());
         app.add_systems(
             Update,
             check_terrain_generation_progress
@@ -50,12 +54,17 @@ fn check_connection_progress(client_ready: Option<Res<ClientNetworkStateReady>>)
     }
 }
 
-fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProgress>) -> Progress {
+fn check_terrain_generation_progress(
+    terrain_progress: Res<TerrainGenerationProgress>,
+    mut progress: ResMut<ProgressGeneration>,
+) -> Progress {
     let total = terrain_progress.total_chunks.max(1); // Avoid division by zero
     trace!(
         "Terrain generation progress: {}/{} chunks",
-        terrain_progress.generated_chunks, total
+        terrain_progress.generated_chunks,
+        total
     );
+    **progress = terrain_progress.generated_chunks as f32 / total as f32;
     Progress {
         done: terrain_progress.generated_chunks,
         total,
