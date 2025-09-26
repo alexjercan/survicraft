@@ -37,13 +37,13 @@ impl Plugin for LauncherProgressPlugin {
 fn check_connection_progress(client_ready: Option<Res<ClientNetworkStateReady>>) -> Progress {
     match client_ready {
         None => {
-            debug!("Connection progress: 1/1 (dedicated server)");
+            trace!("Connection progress: 1/1 (dedicated server)");
 
             Progress { done: 1, total: 1 }
         }
         Some(client_ready) => {
             let done = if **client_ready { 1 } else { 0 };
-            debug!("Connection progress: {}/1", done);
+            trace!("Connection progress: {}/1", done);
 
             Progress { done, total: 1 }
         }
@@ -52,7 +52,7 @@ fn check_connection_progress(client_ready: Option<Res<ClientNetworkStateReady>>)
 
 fn check_terrain_generation_progress(terrain_progress: Res<TerrainGenerationProgress>) -> Progress {
     let total = terrain_progress.total_chunks.max(1); // Avoid division by zero
-    debug!(
+    trace!(
         "Terrain generation progress: {}/{} chunks",
         terrain_progress.generated_chunks, total
     );

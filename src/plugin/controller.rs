@@ -119,6 +119,8 @@ fn on_add_player_controller(
                     ..default()
                 },
                 HeadControllerInput::default(),
+                Crafter,
+                CrafterInput::default(),
                 Transform::default(),
                 Rotation::default(),
                 PlayerId(*peer),

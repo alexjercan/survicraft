@@ -11,6 +11,7 @@ mod setup;
 mod states;
 mod ui;
 mod world;
+mod inventory;
 
 use avian3d::prelude::*;
 use bevy::prelude::*;
@@ -70,6 +71,9 @@ impl Plugin for LauncherPlugin {
                 .disable::<SleepingPlugin>(),
         );
         app.add_plugins(controller::PlayerControllerPlugin {
+            render: self.render,
+        });
+        app.add_plugins(inventory::GameInventoryPlugin {
             render: self.render,
         });
         if self.render {

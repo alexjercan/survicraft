@@ -102,7 +102,7 @@ fn handle_crater_input(
             cache,
             &q_item,
             &recipe,
-            transform.translation(),
+            transform.translation() + transform.forward().xz().extend(0.0).xzy() * 1.5
         );
     }
 }
