@@ -7,6 +7,7 @@ mod features;
 mod main_menu;
 mod terrain;
 mod tilemap;
+mod inventory;
 
 pub mod prelude {
     pub use super::assets::prelude::*;
@@ -18,4 +19,5 @@ pub mod prelude {
     pub use super::main_menu::prelude::*;
     pub use super::terrain::prelude::*;
     pub use super::tilemap::prelude::*;
+    pub use super::inventory::prelude::*;
 }
