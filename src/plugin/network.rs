@@ -218,6 +218,7 @@ fn on_host_connection_added(
 }
 
 fn on_welcome_message(
+    mut commands: Commands,
     mut ev_welcome: EventReader<ServerWelcomeEvent>,
     sender: Single<(&RemoteId, &mut MessageSender<ClientMetaMessage>)>,
     player_name: Res<PlayerNameSetting>,
@@ -234,11 +235,32 @@ fn on_welcome_message(
         **client_ready = true;
         **world_seed = seed;
 
-        let metadata = ClientMetaMessage {
-            username: player_name.to_string(),
-        };
-        debug!("Sending client metadata: {:?}", metadata);
-        sender.send::<MessageChannel>(metadata);
+        match local {
+            PeerId::Local(_) => {
+                // NOTE: I don't like this way of handling things but it is what it is.
+                // Host cannot send messages to server because it doesn't have a transport layer...
+                debug!(
+                    "Host spawn player metadata for peer {:?}: {:?}",
+                    peer, player_name
+                );
+
+                commands.spawn((
+                    Name::new("PlayerMetadata"),
+                    PlayerId(peer),
+                    PlayerMetadata {
+                        username: player_name.to_string(),
+                    },
+                    Replicate::to_clients(NetworkTarget::All),
+                ));
+            }
+            _ => {
+                let metadata = ClientMetaMessage {
+                    username: player_name.to_string(),
+                };
+                debug!("Sending client metadata: {:?}", metadata);
+                sender.send::<MessageChannel>(metadata);
+            }
+        }
     }
 }
 
@@ -547,6 +569,7 @@ impl Plugin for ProtocolPlugin {
         app.add_systems(Update, on_server_spawn_player);
 
         app.add_systems(FixedUpdate, on_server_chat_message);
+        app.add_systems(Update, on_trigger_chat_message);
         app.add_systems(FixedUpdate, receive_server_chat_message);
         app.add_systems(FixedUpdate, receive_client_chat_message);
         app.add_systems(Update, on_chat_message_submit);
@@ -727,8 +750,6 @@ fn on_server_chat_message(
     mut ev_chat: EventReader<ServerChatMessageEvent>,
     mut sender: ServerMultiMessageSender,
     server: Single<&Server>,
-    q_players: Query<(&PlayerMetadata, &PlayerId)>,
-    mut ev_history: EventWriter<AddChatHistoryItemEvent>,
 ) -> Result {
     for ev in ev_chat.read() {
         sender.send::<_, MessageChannel>(
@@ -739,7 +760,17 @@ fn on_server_chat_message(
             server.clone(),
             &NetworkTarget::All,
         )?;
+    }
 
+    Ok(())
+}
+
+fn on_trigger_chat_message(
+    mut ev_chat: EventReader<ServerChatMessageEvent>,
+    q_players: Query<(&PlayerMetadata, &PlayerId)>,
+    mut ev_history: EventWriter<AddChatHistoryItemEvent>,
+) -> Result {
+    for ev in ev_chat.read() {
         if let Some((PlayerMetadata { username, .. }, _)) =
             q_players.iter().find(|(_, id)| id.0 == ev.sender)
         {
@@ -766,6 +797,8 @@ fn receive_server_chat_message(
 ) {
     for mut receiver in q_receiver.iter_mut() {
         for message in receiver.receive() {
+            debug!("Received chat message from {:?}: {}", message.sender, message.message);
+
             ev_chat.write(ServerChatMessageEvent {
                 sender: message.sender,
                 message: message.message.clone(),
