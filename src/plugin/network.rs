@@ -376,10 +376,6 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
-        app.register_component::<RigidBody>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
         app.register_component::<PlayerId>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
@@ -406,13 +402,7 @@ impl Plugin for ProtocolPlugin {
         app.register_component::<ExternalForce>()
             .add_prediction(PredictionMode::Full);
 
-        app.register_component::<ExternalTorque>()
-            .add_prediction(PredictionMode::Full);
-
         app.register_component::<ExternalImpulse>()
-            .add_prediction(PredictionMode::Full);
-
-        app.register_component::<ExternalAngularImpulse>()
             .add_prediction(PredictionMode::Full);
 
         app.register_component::<ComputedMass>()
