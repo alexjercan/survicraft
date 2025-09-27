@@ -9,6 +9,7 @@ mod terrain;
 mod tilemap;
 mod inventory;
 mod status;
+mod lightyear_events;
 
 pub mod prelude {
     pub use super::assets::prelude::*;
@@ -22,4 +23,5 @@ pub mod prelude {
     pub use super::tilemap::prelude::*;
     pub use super::inventory::prelude::*;
     pub use super::status::prelude::*;
+    pub use super::lightyear_events::prelude::*;
 }
