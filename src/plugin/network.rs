@@ -367,9 +367,7 @@ impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
         // Components for player
         app.register_type::<PlayerId>()
-            .register_type::<PlayerMetadata>()
-            .register_type::<PlayerController>()
-            .register_type::<HeadControllerMarker>();
+            .register_type::<PlayerMetadata>();
 
         // Register components for replication
         app.register_component::<Name>()
@@ -384,7 +382,7 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
-        app.register_component::<PlayerController>()
+        app.register_component::<PlayerControllerMarker>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 

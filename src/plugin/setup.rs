@@ -124,7 +124,7 @@ mod debug {
         prelude::{input::InputBuffer, server::ClientOf, *},
     };
 
-    use crate::plugin::controller::{CharacterAction, PlayerController};
+    use crate::plugin::controller::{CharacterAction, PlayerControllerMarker};
 
     pub struct InpsectorDebugPlugin;
 
@@ -235,7 +235,7 @@ mod debug {
                 Option<&ActionState<CharacterAction>>,
                 Option<&InputBuffer<ActionState<CharacterAction>>>,
             ),
-            (With<PlayerController>, Without<Confirmed>),
+            (With<PlayerControllerMarker>, Without<Confirmed>),
         >,
     ) {
         let (timeline, rollback) = timeline.into_inner();
@@ -282,7 +282,7 @@ mod debug {
                 Option<&FrameInterpolate<Rotation>>,
                 Option<&VisualCorrection<Rotation>>,
             ),
-            (With<PlayerController>, Without<Confirmed>),
+            (With<PlayerControllerMarker>, Without<Confirmed>),
         >,
     ) {
         let (timeline, rollback) = timeline.into_inner();

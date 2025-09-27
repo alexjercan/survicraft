@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// Marker component for the player character entity. Spawn this when you
 /// want to attach a player bundle and have it be controlled by a player.
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-pub(super) struct PlayerController;
+pub(super) struct PlayerControllerMarker;
 
 pub(super) struct PlayerControllerPlugin {
     pub render: bool,
@@ -18,6 +18,17 @@ pub(super) struct PlayerControllerPlugin {
 
 impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<PlayerControllerMarker>()
+            .register_type::<HeadControllerMarker>();
+
+        app.register_component::<PlayerControllerMarker>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
+        app.register_component::<HeadControllerMarker>()
+            .add_prediction(PredictionMode::Once)
+            .add_interpolation(InterpolationMode::Once);
+
         app.add_plugins(KinematicCharacterPlugin);
         app.add_plugins(HeadControllerPlugin);
 
@@ -58,7 +69,7 @@ pub enum HeadAction {
 fn handle_spawn_player(
     mut commands: Commands,
     mut ev_spawn: EventReader<FromClient<ClientSpawnPlayerEvent>>,
-    q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
+    q_player: Query<(Entity, &PlayerId), With<PlayerControllerMarker>>,
 ) {
     for FromClient { owner, peer, .. } in ev_spawn.read() {
         if q_player.iter().any(|(_, id)| id.0 == *peer) {
@@ -73,7 +84,7 @@ fn handle_spawn_player(
 
         commands.spawn((
             Name::new("Player"),
-            PlayerController,
+            PlayerControllerMarker,
             ActionState::<CharacterAction>::default(),
             CharacterInput::default(),
             Position(Vec3::new(0.0, 3.0, 0.0)),
@@ -95,7 +106,7 @@ fn on_add_player_controller(
     mut commands: Commands,
     q_player: Query<
         (Entity, &PlayerId, Has<Controlled>),
-        (Added<Predicted>, With<PlayerController>),
+        (Added<Predicted>, With<PlayerControllerMarker>),
     >,
 ) {
     for (entity, PlayerId(peer), is_controlled) in &q_player {
@@ -104,6 +115,7 @@ fn on_add_player_controller(
         commands.entity(entity).insert((
             KinematicCharacterBundle::default(),
             CharacterInput::default(),
+            Transform::default(),
         ));
 
         if is_controlled {
@@ -144,7 +156,7 @@ fn on_add_player_controller(
 fn add_head_controller_to_new_players(
     mut commands: Commands,
     q_head: Query<(Entity, &PlayerId), (With<HeadControllerMarker>, Without<HeadControllerTarget>)>,
-    q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
+    q_player: Query<(Entity, &PlayerId), With<PlayerControllerMarker>>,
 ) {
     for (entity, PlayerId(peer)) in &q_head {
         let player = match q_player.iter().find(|(_, id)| id.0 == *peer) {
@@ -176,8 +188,8 @@ fn update_head_input(mut q_head: Query<(&mut HeadControllerInput, &ActionState<H
 }
 
 fn sync_character_rotation(
-    mut q_player: Query<&mut Rotation, With<PlayerController>>,
-    q_head: Query<(&Rotation, &HeadControllerTarget), Without<PlayerController>>,
+    mut q_player: Query<&mut Rotation, With<PlayerControllerMarker>>,
+    q_head: Query<(&Rotation, &HeadControllerTarget), Without<PlayerControllerMarker>>,
 ) {
     for (rotation, &HeadControllerTarget(target)) in q_head.iter() {
         let mut target_rotation = match q_player.get_mut(target) {
@@ -205,7 +217,7 @@ impl Plugin for PlayerRenderPlugin {
 }
 
 fn handle_render_player(
-    q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerController>)>,
+    q_player: Query<(Entity, Has<Controlled>), (Added<Predicted>, With<PlayerControllerMarker>)>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,

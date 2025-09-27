@@ -27,7 +27,7 @@ impl Plugin for GameInventoryPlugin {
 // - press Z will spawn 1 wood item at the player position
 fn testing_spawn_item(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    player_query: Query<&Transform, With<PlayerController>>,
+    player_query: Query<&Transform, With<PlayerControllerMarker>>,
     item_assets: Res<ItemAssets>,
     mut commands: Commands,
 ) {
