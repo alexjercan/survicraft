@@ -124,6 +124,7 @@ fn client_handle_player_spawned(
             KinematicCharacterBundle::default(),
             CharacterInput::default(),
             Transform::default(),
+            Rotation::default(),
         ));
 
         if is_controlled {
@@ -145,7 +146,6 @@ fn client_handle_player_spawned(
                 HeadControllerTarget(entity),
                 // Network related components
                 Transform::default(),
-                Rotation::default(),
                 PlayerId(*peer),
                 Replicate::to_server(),
             ));
@@ -199,9 +199,9 @@ fn client_update_head_input(
 
 fn sync_character_rotation(
     mut q_player: Query<&mut Rotation, With<PlayerControllerMarker>>,
-    q_head: Query<(&Rotation, &HeadControllerTarget), Without<PlayerControllerMarker>>,
+    q_head: Query<(&Transform, &HeadControllerTarget), Without<PlayerControllerMarker>>,
 ) {
-    for (rotation, &HeadControllerTarget(target)) in q_head.iter() {
+    for (transform, &HeadControllerTarget(target)) in q_head.iter() {
         let mut target_rotation = match q_player.get_mut(target) {
             Ok(r) => r,
             Err(_) => {
@@ -213,7 +213,7 @@ fn sync_character_rotation(
             }
         };
 
-        let (yaw, _, _) = rotation.0.to_euler(EulerRot::YXZ);
+        let (yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
         target_rotation.0 = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
     }
 }

@@ -1,7 +1,5 @@
 //! TODO: Document this module
 
-// NOTE: I know... using avian3d just for Rotation... but it is convenient
-use avian3d::prelude::*;
 use bevy::prelude::*;
 
 /// The Head camera component, which allows for mouse look.
@@ -54,14 +52,13 @@ impl Plugin for HeadControllerPlugin {
 fn sync_transform(
     mut q_camera: Query<(
         &mut Transform,
-        &mut Rotation,
         &HeadControllerInput,
         &HeadController,
         &HeadControllerTarget,
     )>,
     q_target: Query<&GlobalTransform, Without<HeadController>>,
 ) {
-    for (mut transform, mut rotation, input, camera, &HeadControllerTarget(target)) in
+    for (mut transform, input, camera, &HeadControllerTarget(target)) in
         q_camera.iter_mut()
     {
         let target_transform = match q_target.get(target) {
@@ -80,9 +77,7 @@ fn sync_transform(
         let (target_yaw, _, _) = transform.rotation.to_euler(EulerRot::YXZ);
         let new_yaw = target_yaw + yaw_delta;
 
-        rotation.0 = Quat::from_euler(EulerRot::YXZ, new_yaw, new_pitch, 0.0);
-
-        transform.rotation = rotation.0;
+        transform.rotation = Quat::from_euler(EulerRot::YXZ, new_yaw, new_pitch, 0.0);
         transform.translation = target_transform.translation() + camera.offset;
     }
 }
