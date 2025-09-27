@@ -12,6 +12,10 @@ use crate::prelude::*;
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
 pub(super) struct PlayerControllerMarker;
 
+/// Marker component for the head entity, which is responsible for character rotation.
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
+pub(super) struct HeadControllerMarker;
+
 pub(super) struct PlayerControllerPlugin {
     pub render: bool,
 }
@@ -42,11 +46,11 @@ impl Plugin for PlayerControllerPlugin {
         app.add_systems(
             Update,
             (
-                on_add_player_controller,
-                add_head_controller_to_new_players,
-                update_character_input,
-                update_head_input,
-                handle_spawn_player,
+                client_handle_player_spawned,
+                client_update_character_input,
+                client_update_head_input,
+                server_handle_spawn_player,
+                server_add_head_controller_to_new_players,
                 sync_character_rotation,
             ),
         );
@@ -66,7 +70,7 @@ pub enum HeadAction {
     Look,
 }
 
-fn handle_spawn_player(
+fn server_handle_spawn_player(
     mut commands: Commands,
     mut ev_spawn: EventReader<FromClient<ClientSpawnPlayerEvent>>,
     q_player: Query<(Entity, &PlayerId), With<PlayerControllerMarker>>,
@@ -106,7 +110,7 @@ fn handle_spawn_player(
     }
 }
 
-fn on_add_player_controller(
+fn client_handle_player_spawned(
     mut commands: Commands,
     q_player: Query<
         (Entity, &PlayerId, Has<Controlled>),
@@ -127,22 +131,22 @@ fn on_add_player_controller(
 
             commands.spawn((
                 Name::new("Head"),
+                HeadControllerMarker,
+                Camera3d::default(),
                 InputMap::default()
                     .with_dual_axis(HeadAction::Look, GamepadStick::RIGHT)
                     .with_dual_axis(HeadAction::Look, MouseMove::default()),
-                Camera3d::default(), // NOTE: Careful when self.render = false
+                // Head controller related components
+                HeadControllerInput::default(),
                 HeadController {
                     offset: Vec3::new(0.0, CHARACTER_CAPSULE_HEIGHT / 2.0, 0.0),
                     ..default()
                 },
-                HeadControllerInput::default(),
-                Crafter,
-                CrafterInput::default(),
+                HeadControllerTarget(entity),
+                // Network related components
                 Transform::default(),
                 Rotation::default(),
                 PlayerId(*peer),
-                HeadControllerMarker,
-                HeadControllerTarget(entity),
                 Replicate::to_server(),
             ));
 
@@ -157,7 +161,7 @@ fn on_add_player_controller(
     }
 }
 
-fn add_head_controller_to_new_players(
+fn server_add_head_controller_to_new_players(
     mut commands: Commands,
     q_head: Query<(Entity, &PlayerId), (With<HeadControllerMarker>, Without<HeadControllerTarget>)>,
     q_player: Query<(Entity, &PlayerId), With<PlayerControllerMarker>>,
@@ -171,12 +175,12 @@ fn add_head_controller_to_new_players(
             }
         };
 
-        trace!("Linking head controller {entity:?} to player entity {player:?}");
+        debug!("Linking head controller {entity:?} to player entity {player:?}");
         commands.entity(entity).insert(HeadControllerTarget(player));
     }
 }
 
-fn update_character_input(
+fn client_update_character_input(
     mut q_player: Query<(&mut CharacterInput, &ActionState<CharacterAction>)>,
 ) {
     for (mut input, action_state) in q_player.iter_mut() {
@@ -185,7 +189,9 @@ fn update_character_input(
     }
 }
 
-fn update_head_input(mut q_head: Query<(&mut HeadControllerInput, &ActionState<HeadAction>)>) {
+fn client_update_head_input(
+    mut q_head: Query<(&mut HeadControllerInput, &ActionState<HeadAction>)>,
+) {
     for (mut input, action_state) in q_head.iter_mut() {
         input.look_axis = action_state.axis_pair(&HeadAction::Look);
     }

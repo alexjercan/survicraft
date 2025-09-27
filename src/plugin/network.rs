@@ -356,10 +356,6 @@ pub(super) struct PlayerMetadata {
     pub username: String,
 }
 
-/// Marker component for the head entity, which is responsible for character rotation.
-#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq, Reflect)]
-pub(super) struct HeadControllerMarker;
-
 /// Protocol Plugin
 pub struct ProtocolPlugin;
 
