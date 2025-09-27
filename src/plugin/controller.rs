@@ -35,9 +35,10 @@ impl Plugin for PlayerControllerPlugin {
                 add_head_controller_to_new_players,
                 update_character_input,
                 update_head_input,
+                handle_spawn_player,
+                sync_character_rotation,
             ),
         );
-        app.add_systems(FixedUpdate, (handle_spawn_player, sync_character_rotation));
     }
 }
 
@@ -56,10 +57,10 @@ pub enum HeadAction {
 
 fn handle_spawn_player(
     mut commands: Commands,
-    mut ev_spawn: EventReader<ServerSpawnPlayerEvent>,
+    mut ev_spawn: EventReader<FromClient<ClientSpawnPlayerEvent>>,
     q_player: Query<(Entity, &PlayerId), With<PlayerController>>,
 ) {
-    for ServerSpawnPlayerEvent { owner, peer } in ev_spawn.read() {
+    for FromClient { owner, peer, .. } in ev_spawn.read() {
         if q_player.iter().any(|(_, id)| id.0 == *peer) {
             warn!(
                 "Player with ID {:?} already has a character, ignoring spawn request",

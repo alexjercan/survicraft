@@ -93,15 +93,5 @@ impl Plugin for LauncherPlugin {
                 },
             );
         }
-        if !dedicated {
-            // If we are not a dedicated server, spawn the player entity when entering Playing
-            // state
-            app.add_systems(
-                OnEnter(states::LauncherStates::Playing),
-                |mut ev_spawn: EventWriter<network::ClientSpawnPlayerEvent>| {
-                    ev_spawn.write(network::ClientSpawnPlayerEvent);
-                },
-            );
-        }
     }
 }

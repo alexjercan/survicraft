@@ -31,10 +31,6 @@ impl Plugin for LauncherProgressPlugin {
                 .track_progress::<LauncherStates>()
                 .run_if(in_state(LauncherStates::Generating)),
         );
-
-        app.add_systems(OnEnter(LauncherStates::Playing), || {
-            info!("Entered Playing state...");
-        });
     }
 }
 

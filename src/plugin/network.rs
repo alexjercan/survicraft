@@ -57,6 +57,11 @@ impl Plugin for NetworkPlugin {
         });
 
         app.add_plugins(ProtocolPlugin);
+        app.add_plugins(WelcomePlugin);
+        app.add_plugins(ControllerPlugin {
+            dedicated: self.dedicated,
+        });
+        app.add_plugins(ChatPlugin);
 
         if !self.dedicated {
             app.add_plugins(ClientPlugin);
@@ -138,7 +143,6 @@ impl Plugin for ClientPlugin {
 
         app.add_observer(on_client_connection_added);
         app.add_observer(on_host_connection_added);
-        app.add_systems(FixedUpdate, on_welcome_message);
     }
 }
 
@@ -217,53 +221,6 @@ fn on_host_connection_added(
     Ok(())
 }
 
-fn on_welcome_message(
-    mut commands: Commands,
-    mut ev_welcome: EventReader<ServerWelcomeEvent>,
-    sender: Single<(&RemoteId, &mut MessageSender<ClientMetaMessage>)>,
-    player_name: Res<PlayerNameSetting>,
-    mut client_ready: ResMut<ClientNetworkStateReady>,
-    mut world_seed: ResMut<TerrainGenerationSeed>,
-) {
-    let (RemoteId(local), mut sender) = sender.into_inner();
-
-    for &ServerWelcomeEvent { peer, seed } in ev_welcome.read() {
-        if *local != peer {
-            continue;
-        }
-        debug!("Received welcome message from server: {:?}", peer);
-        **client_ready = true;
-        **world_seed = seed;
-
-        match local {
-            PeerId::Local(_) => {
-                // NOTE: I don't like this way of handling things but it is what it is.
-                // Host cannot send messages to server because it doesn't have a transport layer...
-                debug!(
-                    "Host spawn player metadata for peer {:?}: {:?}",
-                    peer, player_name
-                );
-
-                commands.spawn((
-                    Name::new("PlayerMetadata"),
-                    PlayerId(peer),
-                    PlayerMetadata {
-                        username: player_name.to_string(),
-                    },
-                    Replicate::to_clients(NetworkTarget::All),
-                ));
-            }
-            _ => {
-                let metadata = ClientMetaMessage {
-                    username: player_name.to_string(),
-                };
-                debug!("Sending client metadata: {:?}", metadata);
-                sender.send::<MessageChannel>(metadata);
-            }
-        }
-    }
-}
-
 /// Server component to mark the server entity.
 /// Add this component to an entity to make it a server.
 #[derive(Debug, Clone, Component)]
@@ -275,9 +232,6 @@ impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(on_server_listener_added);
         app.add_observer(on_new_client);
-        app.add_observer(on_new_connection);
-
-        app.add_systems(FixedUpdate, on_client_metadata_message);
     }
 }
 
@@ -302,7 +256,7 @@ fn on_new_client(
     mut commands: Commands,
     _server: Single<&Server>,
 ) {
-    info!("New client connected: {:?}", trigger.target());
+    debug!("New client connected: {:?}", trigger.target());
 
     commands
         .entity(trigger.target())
@@ -313,48 +267,6 @@ fn on_new_client(
             SendUpdatesMode::SinceLastAck,
             false,
         ));
-}
-
-fn on_new_connection(
-    trigger: Trigger<OnAdd, Connected>,
-    q_connected: Query<&RemoteId, With<ClientOf>>,
-    mut ev_welcome: EventWriter<ServerWelcomeEvent>,
-    world_seed: Res<TerrainGenerationSeed>,
-    _: Single<&Server>,
-) -> Result {
-    info!("New connection established: {:?}", trigger.target());
-
-    let entity = trigger.target();
-    let RemoteId(peer) = q_connected.get(entity)?;
-    let welcome = ServerWelcomeEvent {
-        peer: *peer,
-        seed: **world_seed,
-    };
-    debug!("Sending welcome message to {:?}: {:?}", peer, welcome);
-
-    ev_welcome.write(welcome);
-
-    Ok(())
-}
-
-fn on_client_metadata_message(
-    mut commands: Commands,
-    mut q_receiver: Query<(&RemoteId, &mut MessageReceiver<ClientMetaMessage>)>,
-) {
-    for (RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
-        for message in receiver.receive() {
-            debug!("Spawn player metadata for peer {:?}: {:?}", peer, message);
-
-            commands.spawn((
-                Name::new("PlayerMetadata"),
-                PlayerId(*peer),
-                PlayerMetadata {
-                    username: message.username.clone(),
-                },
-                Replicate::to_clients(NetworkTarget::All),
-            ));
-        }
-    }
 }
 
 /// Wrapper around the Leafwing InputManagerPlugin to configure it for networked use.
@@ -460,7 +372,6 @@ impl Plugin for ProtocolPlugin {
             .register_type::<HeadControllerMarker>();
 
         // Register components for replication
-
         app.register_component::<Name>()
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
@@ -533,244 +444,235 @@ impl Plugin for ProtocolPlugin {
         app.world_mut()
             .resource_mut::<InterpolationRegistry>()
             .set_interpolation_mode::<Transform>(InterpolationMode::None);
+    }
+}
 
-        // Messages and channels
-        app.add_message::<ServerWelcomeMessage>()
-            .add_direction(NetworkDirection::ServerToClient);
-        app.add_event::<ServerWelcomeEvent>();
+// --- Welcome Plugin ---
+//
+// This plugin handles the initial welcome message sent from the server to the client
+// when it connects. The welcome message contains important information such as the
+// world seed.
+//
+// Then the client responds with its metadata (e.g. username) as an ACK to the server.
 
-        app.add_message::<ClientMetaMessage>()
-            .add_direction(NetworkDirection::ClientToServer);
+#[derive(Debug, Clone, Event, Serialize, Deserialize)]
+struct ServerWelcomeEvent {
+    pub seed: u32,
+}
 
-        app.add_message::<ClientSpawnRequest>()
-            .add_direction(NetworkDirection::ClientToServer);
-        app.add_event::<ClientSpawnPlayerEvent>();
-        app.add_event::<ServerSpawnPlayerEvent>();
+#[derive(Debug, Clone, Event, Serialize, Deserialize)]
+struct ClientMetadataEvent {
+    pub username: String,
+}
 
-        app.add_message::<ClientChatMessage>()
-            .add_direction(NetworkDirection::ClientToServer);
+struct WelcomeChannel;
 
-        app.add_message::<ServerChatMessage>()
-            .add_direction(NetworkDirection::ServerToClient);
-        app.add_event::<ServerChatMessageEvent>();
+pub struct WelcomePlugin;
+
+impl Plugin for WelcomePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_server_event::<ServerWelcomeEvent, WelcomeChannel>();
+        app.add_client_event::<ClientMetadataEvent, WelcomeChannel>();
+
+        app.add_observer(on_new_connection);
+        app.add_systems(Update, on_server_welcome_message);
+        app.add_systems(Update, on_client_metadata_message);
+
+        app.add_channel::<WelcomeChannel>(ChannelSettings {
+            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
+            ..default()
+        })
+        .add_direction(NetworkDirection::Bidirectional);
+    }
+}
+
+fn on_new_connection(
+    trigger: Trigger<OnAdd, Connected>,
+    q_connected: Query<(&RemoteId, Has<HostClient>), With<ClientOf>>,
+    mut ev_server: EventWriter<ToClient<ServerWelcomeEvent>>,
+    mut ev_host: EventWriter<ServerWelcomeEvent>,
+    world_seed: Res<TerrainGenerationSeed>,
+    _: Single<&Server>,
+) -> Result {
+    debug!("New connection established: {:?}", trigger.target());
+
+    let entity = trigger.target();
+    let (RemoteId(peer), is_host) = q_connected.get(entity)?;
+    if is_host {
+        debug!("This is a host client connection");
+
+        ev_host.write(ServerWelcomeEvent { seed: **world_seed });
+    } else {
+        ev_server.write(ToClient {
+            target: NetworkTarget::Single(*peer),
+            event: ServerWelcomeEvent { seed: **world_seed },
+        });
+    }
+
+    Ok(())
+}
+
+fn on_server_welcome_message(
+    mut ev_welcome: EventReader<ServerWelcomeEvent>,
+    mut ev_metadata: EventWriter<ClientMetadataEvent>,
+    player_name: Res<PlayerNameSetting>,
+    mut client_ready: ResMut<ClientNetworkStateReady>,
+    mut world_seed: ResMut<TerrainGenerationSeed>,
+) {
+    for &ServerWelcomeEvent { seed } in ev_welcome.read() {
+        debug!("Received welcome message from server");
+        **client_ready = true;
+        **world_seed = seed;
+
+        ev_metadata.write(ClientMetadataEvent {
+            username: player_name.to_string(),
+        });
+    }
+}
+
+fn on_client_metadata_message(
+    mut commands: Commands,
+    mut ev_metadata: EventReader<FromClient<ClientMetadataEvent>>,
+) {
+    for FromClient { peer, event, .. } in ev_metadata.read() {
+        debug!("Spawn player metadata for peer {:?}: {:?}", peer, event);
+
+        commands.spawn((
+            Name::new("PlayerMetadata"),
+            PlayerId(*peer),
+            PlayerMetadata {
+                username: event.username.clone(),
+            },
+            Replicate::to_clients(NetworkTarget::All),
+        ));
+    }
+}
+
+// --- Controller Plugin ---
+//
+// When we enter the Playing state we need to send a spawn request to the server.
+
+#[derive(Debug, Clone, Event, Serialize, Deserialize)]
+pub struct ClientSpawnPlayerEvent;
+
+struct SpawnChannel;
+
+pub struct ControllerPlugin {
+    dedicated: bool,
+}
+
+impl Plugin for ControllerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_client_event::<ClientSpawnPlayerEvent, SpawnChannel>();
+
+        if !self.dedicated {
+            app.add_systems(OnEnter(LauncherStates::Playing), send_spawn_request);
+        }
+
+        app.add_channel::<SpawnChannel>(ChannelSettings {
+            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
+            ..default()
+        })
+        .add_direction(NetworkDirection::Bidirectional);
+    }
+}
+
+fn send_spawn_request(mut ev_spawn: EventWriter<ClientSpawnPlayerEvent>) {
+    debug!("Sending spawn request to server");
+    ev_spawn.write(ClientSpawnPlayerEvent);
+}
+
+// --- Chat Plugin ---
+//
+// This plugin handles chat messages sent from clients to the server and broadcasted to all
+// clients.
+
+#[derive(Debug, Clone, Event, Serialize, Deserialize)]
+pub struct ClientChatMessageEvent {
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Event, Serialize, Deserialize)]
+pub struct ServerChatMessageEvent {
+    pub sender: PeerId,
+    pub message: String,
+}
+
+struct MessageChannel;
+
+pub struct ChatPlugin;
+
+impl Plugin for ChatPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_client_event::<ClientChatMessageEvent, MessageChannel>();
+        app.add_server_event::<ServerChatMessageEvent, MessageChannel>();
+
+        app.add_systems(
+            Update,
+            (
+                on_chat_message_submit,
+                on_server_chat_message,
+                on_client_chat_message,
+            )
+                .chain(),
+        );
 
         app.add_channel::<MessageChannel>(ChannelSettings {
             mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
             ..default()
         })
         .add_direction(NetworkDirection::Bidirectional);
-
-        // Systems
-        app.add_systems(FixedUpdate, on_server_welcome);
-        app.add_systems(FixedUpdate, on_client_welcome);
-
-        app.add_systems(Update, on_client_spawn_event);
-        app.add_systems(Update, on_server_spawn_request);
-        app.add_systems(Update, on_server_spawn_player);
-
-        app.add_systems(FixedUpdate, on_server_chat_message);
-        app.add_systems(Update, on_trigger_chat_message);
-        app.add_systems(FixedUpdate, receive_server_chat_message);
-        app.add_systems(FixedUpdate, receive_client_chat_message);
-        app.add_systems(Update, on_chat_message_submit);
     }
 }
 
-/// ServerWelcomeEvent
-///
-/// Flow:
-/// - Server detects new connection (on_new_connection)
-/// - Server triggers ServerWelcomeEvent with peer ID and world seed
-/// - on_server_welcome system sends ServerWelcomeMessage to the client
-/// - Client receives ServerWelcomeMessage in on_client_welcome system
-/// - Client triggers ServerWelcomeEvent with peer ID and world seed
-/// - Client can now use the world seed for terrain generation
-///
-/// This will work for both dedicated servers and host clients.
-#[derive(Debug, Clone, Event)]
-struct ServerWelcomeEvent {
-    pub peer: PeerId,
-    pub seed: u32,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct ServerWelcomeMessage {
-    pub seed: u32,
-}
-
-fn on_server_welcome(
-    mut ev_welcome: EventReader<ServerWelcomeEvent>,
-    mut sender: ServerMultiMessageSender,
-    server: Single<&Server>,
-) -> Result {
-    for &ServerWelcomeEvent { peer, seed } in ev_welcome.read() {
-        sender.send::<_, MessageChannel>(
-            &ServerWelcomeMessage { seed },
-            server.clone(),
-            &NetworkTarget::Single(peer),
-        )?;
-    }
-
-    Ok(())
-}
-
-fn on_client_welcome(
-    receiver: Single<
-        (&RemoteId, &mut MessageReceiver<ServerWelcomeMessage>),
-        Or<(With<Client>, With<HostClient>)>,
-    >,
-    mut ev_welcome: EventWriter<ServerWelcomeEvent>,
+fn on_chat_message_submit(
+    mut ev_submitted: EventReader<ChatMessageSubmittedEvent>,
+    mut ev_client: EventWriter<ClientChatMessageEvent>,
 ) {
-    let (RemoteId(peer), mut receiver) = receiver.into_inner();
+    for ev in ev_submitted.read() {
+        let msg = ev.message.trim();
+        debug!("Player submitted chat message: {}", msg);
 
-    for ServerWelcomeMessage { seed } in receiver.receive() {
-        ev_welcome.write(ServerWelcomeEvent { peer: *peer, seed });
-    }
-}
-
-/// The ClientMetaMessage is sent from the client to the server after receiving the
-/// ServerWelcomeMessage. It contains metadata about the client, such as the username.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct ClientMetaMessage {
-    pub username: String,
-}
-
-/// Event that is used to signal that a player wants to be spawned.
-///
-/// When this event is triggered, the client will send a ClientSpawnRequest message to the server,
-/// which will then spawn the player and replicate it to all clients.
-///
-/// Flow:
-/// - Client triggers ClientSpawnPlayerEvent (e.g. when entering the Playing state)
-/// - on_client_spawn_event system sends ClientSpawnRequest to the server
-/// - Server receives ClientSpawnRequest in on_server_spawn_request system
-/// - Server triggers ServerSpawnPlayerEvent with the peer ID
-/// - Server handles ServerSpawnPlayerEvent to actually spawn the player entity
-#[derive(Debug, Clone, Event)]
-pub(crate) struct ClientSpawnPlayerEvent;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct ClientSpawnRequest;
-
-#[derive(Debug, Clone, Event)]
-pub(crate) struct ServerSpawnPlayerEvent {
-    pub owner: Entity,
-    pub peer: PeerId,
-}
-
-fn on_client_spawn_event(
-    mut ev_spawn: EventReader<ClientSpawnPlayerEvent>,
-    sender: Single<(&RemoteId, &mut MessageSender<ClientSpawnRequest>)>,
-) {
-    let (RemoteId(peer), mut sender) = sender.into_inner();
-
-    for _ in ev_spawn.read() {
-        debug!("Sending spawn request for player {:?}", *peer);
-
-        sender.send::<MessageChannel>(ClientSpawnRequest);
-    }
-}
-
-fn on_server_spawn_request(
-    mut q_receiver: Query<(Entity, &RemoteId, &mut MessageReceiver<ClientSpawnRequest>)>,
-    mut ev_spawn: EventWriter<ServerSpawnPlayerEvent>,
-    _: Single<&Server>,
-) {
-    for (entity, RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
-        for _ in receiver.receive() {
-            debug!("Received spawn request for player {:?}", peer);
-
-            ev_spawn.write(ServerSpawnPlayerEvent {
-                owner: entity,
-                peer: *peer,
+        if !msg.is_empty() {
+            ev_client.write(ClientChatMessageEvent {
+                message: msg.to_string(),
             });
         }
     }
 }
 
-#[derive(Component, Debug, Clone)]
-pub(super) struct NetworkPlayerController {
-    pub owner: Entity,
-    pub peer: PeerId,
-}
-
-fn on_server_spawn_player(
-    mut commands: Commands,
-    q_player: Query<(Entity, &NetworkPlayerController), Added<NetworkPlayerController>>,
-) {
-    for (entity, NetworkPlayerController { owner, peer }) in &q_player {
-        debug!("Adding PlayerId and ControlledBy to entity {entity:?}");
-
-        commands.entity(entity).insert((
-            PlayerId(*peer),
-            Replicate::to_clients(NetworkTarget::All),
-            PredictionTarget::to_clients(NetworkTarget::All),
-            ControlledBy {
-                owner: *owner,
-                lifetime: Lifetime::default(),
-            },
-        ));
-    }
-}
-
-/// Event that is used to signal that a chat message has been submitted by a player.
-///
-/// Flow:
-/// - Player submits chat message (e.g. via UI) and triggers ChatMessageSubmittedEvent
-/// - on_chat_message_submit is triggered
-/// - on_chat_message_submit system sends ClientChatMessage to the server
-/// - Server receives ClientChatMessage in receive_client_chat_message system
-/// - Server triggers ServerChatMessageEvent with the peer ID and message
-/// - on_server_chat_message system sends ServerChatMessage to all clients
-/// - on_server_chat_message system also logs the message and triggers AddChatHistoryItemEvent
-/// - Clients receive ServerChatMessage in receive_server_chat_message system
-/// - Clients trigger ServerChatMessageEvent with the peer ID and message
-///
-/// This will work for both dedicated servers and host clients.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct ServerChatMessage {
-    // NOTE: we probably want to add some metadata like sender id, timestamp, etc.
-    pub sender: PeerId,
-    pub message: String,
-}
-
-#[derive(Debug, Clone, Event)]
-struct ServerChatMessageEvent {
-    pub sender: PeerId,
-    pub message: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct ClientChatMessage {
-    // NOTE: we probably need to also add the peer id or something to identify the sender
-    pub message: String,
-}
-
 fn on_server_chat_message(
-    mut ev_chat: EventReader<ServerChatMessageEvent>,
-    mut sender: ServerMultiMessageSender,
-    server: Single<&Server>,
+    mut ev_client: EventReader<FromClient<ClientChatMessageEvent>>,
+    mut ev_server: EventWriter<ToClient<ServerChatMessageEvent>>,
+    mut ev_host: EventWriter<ServerChatMessageEvent>,
 ) -> Result {
-    for ev in ev_chat.read() {
-        sender.send::<_, MessageChannel>(
-            &ServerChatMessage {
-                sender: ev.sender,
-                message: ev.message.clone(),
+    for FromClient { peer, event, .. } in ev_client.read() {
+        debug!("Received chat message from {:?}: {}", peer, event.message);
+
+        ev_server.write(ToClient {
+            target: NetworkTarget::All,
+            event: ServerChatMessageEvent {
+                sender: *peer,
+                message: event.message.clone(),
             },
-            server.clone(),
-            &NetworkTarget::All,
-        )?;
+        });
+
+        // NOTE: if this is a host client, also write the event locally
+        ev_host.write(ServerChatMessageEvent {
+            sender: *peer,
+            message: event.message.clone(),
+        });
     }
 
     Ok(())
 }
 
-fn on_trigger_chat_message(
-    mut ev_chat: EventReader<ServerChatMessageEvent>,
-    q_players: Query<(&PlayerMetadata, &PlayerId)>,
+fn on_client_chat_message(
+    mut ev_client: EventReader<ServerChatMessageEvent>,
     mut ev_history: EventWriter<AddChatHistoryItemEvent>,
-) -> Result {
-    for ev in ev_chat.read() {
+    q_players: Query<(&PlayerMetadata, &PlayerId)>,
+) {
+    for ev in ev_client.read() {
         if let Some((PlayerMetadata { username, .. }, _)) =
             q_players.iter().find(|(_, id)| id.0 == ev.sender)
         {
@@ -787,56 +689,4 @@ fn on_trigger_chat_message(
             );
         }
     }
-
-    Ok(())
 }
-
-fn receive_server_chat_message(
-    mut q_receiver: Query<&mut MessageReceiver<ServerChatMessage>>,
-    mut ev_chat: EventWriter<ServerChatMessageEvent>,
-) {
-    for mut receiver in q_receiver.iter_mut() {
-        for message in receiver.receive() {
-            debug!("Received chat message from {:?}: {}", message.sender, message.message);
-
-            ev_chat.write(ServerChatMessageEvent {
-                sender: message.sender,
-                message: message.message.clone(),
-            });
-        }
-    }
-}
-
-fn receive_client_chat_message(
-    mut q_receiver: Query<(&RemoteId, &mut MessageReceiver<ClientChatMessage>)>,
-    mut ev_chat: EventWriter<ServerChatMessageEvent>,
-) {
-    for (RemoteId(peer), mut receiver) in q_receiver.iter_mut() {
-        for message in receiver.receive() {
-            debug!("Received chat message from {:?}: {}", peer, message.message);
-
-            ev_chat.write(ServerChatMessageEvent {
-                sender: *peer,
-                message: message.message.clone(),
-            });
-        }
-    }
-}
-
-fn on_chat_message_submit(
-    mut ev_submitted: EventReader<ChatMessageSubmittedEvent>,
-    mut sender: Single<&mut MessageSender<ClientChatMessage>>,
-) {
-    for ev in ev_submitted.read() {
-        let msg = ev.message.trim();
-        debug!("Player submitted chat message: {}", msg);
-
-        if !msg.is_empty() {
-            sender.send::<MessageChannel>(ClientChatMessage {
-                message: msg.to_string(),
-            });
-        }
-    }
-}
-
-struct MessageChannel;
