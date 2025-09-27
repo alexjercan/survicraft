@@ -21,7 +21,7 @@ use lightyear::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use super::{controller::*, resources::*, states::*};
+use super::{resources::*, states::*};
 use crate::prelude::*;
 
 // --- Contants ---
@@ -382,14 +382,6 @@ impl Plugin for ProtocolPlugin {
             .add_prediction(PredictionMode::Once)
             .add_interpolation(InterpolationMode::Once);
 
-        app.register_component::<PlayerControllerMarker>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
-        app.register_component::<HeadControllerMarker>()
-            .add_prediction(PredictionMode::Once)
-            .add_interpolation(InterpolationMode::Once);
-
         // Fully replicated, but not visual, so no need for lerp/corrections:
         app.register_component::<LinearVelocity>()
             .add_prediction(PredictionMode::Full);
@@ -426,6 +418,8 @@ impl Plugin for ProtocolPlugin {
             .add_linear_interpolation_fn();
 
         // Do not replicate Transform but register interpolation for visual interpolation
+        app.register_component::<Transform>()
+            .add_prediction(PredictionMode::None);
         app.world_mut()
             .resource_mut::<InterpolationRegistry>()
             .set_interpolation::<Transform>(TransformLinearInterpolation::lerp);

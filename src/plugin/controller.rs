@@ -86,6 +86,7 @@ fn handle_spawn_player(
             Name::new("Player"),
             PlayerControllerMarker,
             ActionState::<CharacterAction>::default(),
+            // Character related components
             CharacterInput::default(),
             Position(Vec3::new(0.0, 3.0, 0.0)),
             Rotation::default(),
@@ -98,6 +99,9 @@ fn handle_spawn_player(
                 owner: *owner,
                 lifetime: Lifetime::default(),
             },
+            ComponentReplicationOverrides::<Transform>::default()
+                .disable_all()
+                .replicate_once_all(),
         ));
     }
 }
